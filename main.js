@@ -1,4 +1,4 @@
-// Ludo King Master Controller (English Flow: Splash -> Auth -> Lobby -> Clean Arena)
+// Ludo King Master Controller - Universal Layout, 3D Physics Dice & Never-Stuck AI Engine
 document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) {
         window.lucide.createIcons();
@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
         soundEnabled: true
     };
 
-    // Load saved user and progress
     function loadUserData() {
         try {
             const savedProfile = localStorage.getItem('lodu_king_user_v1');
@@ -67,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadUserData();
 
-    // Screen Elements
+    // Elements
     const splashScreen = document.getElementById('splashScreen');
     const splashProgressBar = document.getElementById('splashProgressBar');
     const splashProgressText = document.getElementById('splashProgressText');
@@ -106,14 +105,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const botAvatarWrapper = document.getElementById('botAvatarWrapper');
     const botStatusLabel = document.getElementById('botStatusLabel');
-    const botDiceBox = document.getElementById('botDiceBox');
+    const bot3DDice = document.getElementById('bot3DDice');
 
     const userAvatarWrapper = document.getElementById('userAvatarWrapper');
     const gameUserAvatar = document.getElementById('gameUserAvatar');
     const userTurnTitle = document.getElementById('userTurnTitle');
     const userTurnHint = document.getElementById('userTurnHint');
-    const diceCube = document.getElementById('diceCube');
-    const diceValueDisplay = document.getElementById('diceValueDisplay');
+    const user3DDice = document.getElementById('user3DDice');
+    const userDiceClickArea = document.getElementById('userDiceClickArea');
     const rollDiceBtn = document.getElementById('rollDiceBtn');
 
     // Modals
@@ -138,18 +137,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const ludoGame = new window.LudoGame('ludoCanvas', (isWin) => handleMatchOutcome(isWin));
     const snakeGame = new window.SnakesLaddersGame('snakeCanvas', (isWin) => handleMatchOutcome(isWin));
 
-    // 1. SPLASH SCREEN PROGRESS FLOW
+    // Handle Window Resize for Universal Responsive Canvas
+    window.addEventListener('resize', () => {
+        if (!gameScreen.classList.contains('hidden')) {
+            setTimeout(() => {
+                if (state.currentMode === 'ludo') {
+                    ludoGame.initCanvas();
+                    ludoGame.drawBoard();
+                } else {
+                    snakeGame.initCanvas();
+                    snakeGame.drawBoard();
+                }
+            }, 100);
+        }
+    });
+
+    // 1. SPLASH SCREEN FLOW
     function checkLiveOTA() {
         fetch('http://lodutake.duckdns.org:3000/api/ota/check')
             .then(res => res.json())
             .then(data => {
                 console.log('[Live OTA] Server connected:', data);
-                const tag = document.getElementById('lobbyLevelBadge');
-                if (tag) {
-                    tag.innerHTML = `LVL ${state.currentLevel} • <span class="text-emerald-400 font-bold">OTA LIVE</span>`;
+                if (lobbyLevelBadge) {
+                    lobbyLevelBadge.innerHTML = `LVL ${state.currentLevel} • <span class="text-emerald-400 font-bold">OTA</span>`;
                 }
             })
-            .catch(err => {
+            .catch(() => {
                 console.log('[Live OTA] Offline or local bundle used');
             });
     }
@@ -158,10 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
         checkLiveOTA();
         let progress = 0;
         const interval = setInterval(() => {
-            progress += 20;
+            progress += 25;
             splashProgressBar.style.width = `${progress}%`;
-            if (progress === 40) splashProgressText.textContent = 'Loading Game Assets...';
-            if (progress === 80) splashProgressText.textContent = 'Connecting to Reward Server...';
+            if (progress === 50) splashProgressText.textContent = 'Loading Game Resources...';
+            if (progress === 75) splashProgressText.textContent = 'Connecting to Server...';
             if (progress >= 100) {
                 clearInterval(interval);
                 splashScreen.classList.add('hidden');
@@ -173,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showAuthScreen();
                 }
             }
-        }, 180);
+        }, 160);
     }
 
     // 2. AUTH SCREEN FLOW
@@ -185,10 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
         gameScreen.classList.add('hidden');
 
         avatarPicker.innerHTML = '';
-        AVATARS.forEach((av, idx) => {
+        AVATARS.forEach((av) => {
             const btn = document.createElement('div');
             btn.className = `p-1 rounded-2xl border-2 cursor-pointer transition transform hover:scale-105 flex items-center justify-center ${av.url === selectedAvatarUrl ? 'border-amber-400 bg-amber-500/20' : 'border-slate-700 bg-slate-900'}`;
-            btn.innerHTML = `<img src="${av.url}" class="w-11 h-11 rounded-full">`;
+            btn.innerHTML = `<img src="${av.url}" class="w-10 h-10 rounded-full">`;
             btn.onclick = () => {
                 selectedAvatarUrl = av.url;
                 document.querySelectorAll('#avatarPicker > div').forEach(el => {
@@ -271,15 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gameUserAvatar.src = state.user.avatar;
 
-        if (state.currentMode === 'ludo') {
-            arenaLudoView.classList.remove('hidden');
-            arenaSnakeView.classList.add('hidden');
-            ludoGame.drawBoard();
-        } else {
-            arenaSnakeView.classList.remove('hidden');
-            arenaLudoView.classList.add('hidden');
-            snakeGame.drawBoard();
-        }
+        setTimeout(() => {
+            if (state.currentMode === 'ludo') {
+                arenaLudoView.classList.remove('hidden');
+                arenaSnakeView.classList.add('hidden');
+                ludoGame.initCanvas();
+                ludoGame.drawBoard();
+            } else {
+                arenaSnakeView.classList.remove('hidden');
+                arenaLudoView.classList.add('hidden');
+                snakeGame.initCanvas();
+                snakeGame.drawBoard();
+            }
+        }, 50);
 
         updateArenaUI();
         switchToPlayerTurn();
@@ -295,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gameLevelDisplay.textContent = `LEVEL ${state.currentLevel}`;
         gameDiffBadge.textContent = diff.name;
-        gameDiffBadge.className = `text-[9px] font-black px-1.5 py-0.2 rounded-full border ${diff.badgeBg} ${diff.color}`;
+        gameDiffBadge.className = `text-[8px] font-black px-1.5 py-0.2 rounded-full border ${diff.badgeBg} ${diff.color}`;
         gameMatchNumber.textContent = `${state.currentMatchIndex + 1}`;
 
         let wins = 0;
@@ -304,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         state.matches.forEach((res, idx) => {
             const dot = document.createElement('div');
-            dot.className = 'flex-1 h-2.5 rounded-full flex items-center justify-center transition-all duration-300 ';
+            dot.className = 'flex-1 h-2 rounded-full flex items-center justify-center transition-all duration-300 ';
 
             if (res === true) {
                 wins++;
@@ -327,24 +344,16 @@ document.addEventListener('DOMContentLoaded', () => {
         saveUserData();
     }
 
-    // DICE & TURNS IN CLEAN ARENA
-    function animateDice(value, callback) {
-        diceCube.classList.add('shake-dice');
+    // 3D REALISTIC DICE SYSTEM
+    function roll3DDice(cubeEl, value, callback) {
+        cubeEl.classList.add('rolling-3d');
         window.audioManager.playDiceRoll();
 
-        let count = 0;
-        const interval = setInterval(() => {
-            const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-            diceValueDisplay.textContent = faces[Math.floor(Math.random() * 6)];
-            count++;
-            if (count > 6) {
-                clearInterval(interval);
-                diceCube.classList.remove('shake-dice');
-                const finalFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-                diceValueDisplay.textContent = finalFaces[value - 1] || value;
-                if (callback) callback();
-            }
-        }, 60);
+        setTimeout(() => {
+            cubeEl.classList.remove('rolling-3d');
+            cubeEl.className = `cube-3d show-face-${value}`;
+            if (callback) callback();
+        }, 500);
     }
 
     function handleDiceRoll() {
@@ -355,8 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const diceVal = window.AIEngine.rollDice(false, state.currentLevel, { playerSafeRoll: 6 });
         state.lastDiceValue = diceVal;
 
-        animateDice(diceVal, () => {
+        roll3DDice(user3DDice, diceVal, () => {
             if (state.currentMode === 'snake') {
+                userTurnHint.textContent = `Rolled ${diceVal}! Moving...`;
                 snakeGame.playTurn(diceVal, false, () => {
                     switchToBotTurn();
                 });
@@ -375,42 +385,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // COMPUTER TURN CONTROLLER (NEVER STUCK)
+    let botWatchdogTimer = null;
+
     function switchToBotTurn() {
         state.isPlayerTurn = false;
         userAvatarWrapper.classList.remove('turn-active-ring');
-        botAvatarWrapper.classList.add('turn-active-ring');
+        botAvatarWrapper.classList.add('bot-turn-active-ring');
 
         userTurnTitle.textContent = 'COMPUTER TURN';
-        userTurnTitle.className = 'text-xs sm:text-sm font-bold text-red-400 font-["Poppins"]';
+        userTurnTitle.className = 'text-xs font-bold text-red-400 font-["Poppins"]';
         userTurnHint.textContent = 'Computer is thinking...';
-        botStatusLabel.textContent = 'Rolling dice...';
+        botStatusLabel.textContent = 'Rolling 3D dice...';
+
+        // Clear any old watchdog
+        if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+
+        // Fail-safe global watchdog: if bot takes > 4.5s, force back to player!
+        botWatchdogTimer = setTimeout(() => {
+            console.warn('[Watchdog] Bot turn timeout, returning turn to player');
+            switchToPlayerTurn();
+        }, 4500);
 
         setTimeout(() => {
             executeBotTurn();
-        }, 700);
+        }, 600);
     }
 
     function executeBotTurn() {
         const diceVal = window.AIEngine.rollDice(true, state.currentLevel, {});
         state.lastDiceValue = diceVal;
 
-        botDiceBox.textContent = '🎲';
-        const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-        setTimeout(() => {
-            botDiceBox.textContent = faces[diceVal - 1] || diceVal;
-            window.audioManager.playDiceRoll();
+        // Roll Computer 3D dice
+        roll3DDice(bot3DDice, diceVal, () => {
+            botStatusLabel.textContent = `Rolled ${diceVal}!`;
 
             if (state.currentMode === 'snake') {
+                botStatusLabel.textContent = `Moving ${diceVal} steps...`;
                 snakeGame.playTurn(diceVal, true, () => {
+                    if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
                     switchToPlayerTurn();
                 });
             } else {
+                // Ludo Mode
                 const movable = ludoGame.getMovableTokens(false, diceVal);
+
                 if (movable.length === 0) {
-                    switchToPlayerTurn();
+                    botStatusLabel.textContent = `Rolled ${diceVal} (No moves!)`;
+                    setTimeout(() => {
+                        if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+                        switchToPlayerTurn();
+                    }, 650);
                     return;
                 }
 
+                // Bot chooses best token
                 let chosenId = movable[0];
                 for (let id of movable) {
                     if (ludoGame.botTokens[id].pos > ludoGame.botTokens[chosenId].pos) {
@@ -418,33 +447,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
+                botStatusLabel.textContent = `Moving piece...`;
                 ludoGame.moveToken(false, chosenId, diceVal, (extraTurn) => {
+                    if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+
                     if (extraTurn && !ludoGame.isGameOver) {
-                        setTimeout(() => executeBotTurn(), 600);
+                        botStatusLabel.textContent = `Rolled 6 or Cut! Extra turn!`;
+                        setTimeout(() => executeBotTurn(), 650);
                     } else {
-                        switchToPlayerTurn();
+                        setTimeout(() => switchToPlayerTurn(), 350);
                     }
                 });
             }
-        }, 500);
+        });
     }
 
     function switchToPlayerTurn() {
+        if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+
         state.isPlayerTurn = true;
         state.canRoll = true;
         rollDiceBtn.disabled = false;
 
-        botAvatarWrapper.classList.remove('turn-active-ring');
+        botAvatarWrapper.classList.remove('bot-turn-active-ring');
         userAvatarWrapper.classList.add('turn-active-ring');
 
-        userTurnTitle.innerHTML = `<span>YOUR TURN</span><span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>`;
-        userTurnTitle.className = 'text-xs sm:text-sm font-black text-emerald-400 font-["Poppins"] flex items-center gap-1';
-        userTurnHint.textContent = 'Tap dice to roll';
+        userTurnTitle.innerHTML = `<span>YOUR TURN</span><span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>`;
+        userTurnTitle.className = 'text-xs font-black text-emerald-400 font-["Poppins"] flex items-center gap-1';
+        userTurnHint.textContent = 'Tap 3D dice to roll';
         botStatusLabel.textContent = 'Waiting turn...';
     }
 
     rollDiceBtn.addEventListener('click', handleDiceRoll);
-    diceCube.addEventListener('click', handleDiceRoll);
+    userDiceClickArea.addEventListener('click', handleDiceRoll);
 
     function triggerConfetti() {
         if (typeof confetti === 'function') {
@@ -458,6 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // MATCH OUTCOME & 8-WIN / 3-LOSS RULES
     function handleMatchOutcome(isWin) {
+        if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+
         state.matches[state.currentMatchIndex] = isWin;
         updateArenaUI();
 
@@ -469,16 +506,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isWin) {
             triggerConfetti();
-            resultIconWrapper.className = 'w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400';
-            resultIconWrapper.innerHTML = '<i data-lucide="trophy" class="w-8 h-8"></i>';
+            resultIconWrapper.className = 'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-2 shadow-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400';
+            resultIconWrapper.innerHTML = '<i data-lucide="trophy" class="w-7 h-7"></i>';
             resultTitle.textContent = 'VICTORY! YOU WON! 🏆';
-            resultTitle.className = 'text-xl font-black mb-1 text-emerald-400 font-["Poppins"]';
+            resultTitle.className = 'text-lg font-black mb-1 text-emerald-400 font-["Poppins"]';
             resultDesc.textContent = `Match ${state.currentMatchIndex + 1} completed! Level score: ${wins}/8 Wins.`;
         } else {
-            resultIconWrapper.className = 'w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-lg bg-rose-500/20 border border-rose-500/40 text-rose-400';
-            resultIconWrapper.innerHTML = '<i data-lucide="skull" class="w-8 h-8"></i>';
+            resultIconWrapper.className = 'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-2 shadow-lg bg-rose-500/20 border border-rose-500/40 text-rose-400';
+            resultIconWrapper.innerHTML = '<i data-lucide="skull" class="w-7 h-7"></i>';
             resultTitle.textContent = 'DEFEAT! COMPUTER WON!';
-            resultTitle.className = 'text-xl font-black mb-1 text-rose-400 font-["Poppins"]';
+            resultTitle.className = 'text-lg font-black mb-1 text-rose-400 font-["Poppins"]';
             resultDesc.textContent = `Losses in this level: ${losses}/3. 3 losses resets to Level 1!`;
         }
 
@@ -487,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3 LOSSES = RESET TO LEVEL 1
         if (losses >= 3) {
             resultTitle.textContent = 'LEVEL FAILED! (3 LOSSES)';
-            resultDesc.innerHTML = `<span class="text-rose-400 font-bold">You suffered 3 losses! Your run has ended and resets to Level 1!</span><br><button id="reviveAdBtn" class="mt-2.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md inline-flex items-center gap-1.5 font-['Poppins']"><i data-lucide="play-circle" class="w-4 h-4"></i> Watch Ad to Revive 1 Loss</button>`;
+            resultDesc.innerHTML = `<span class="text-rose-400 font-bold">You suffered 3 losses! Your run resets to Level 1!</span><br><button id="reviveAdBtn" class="mt-2 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md inline-flex items-center gap-1 font-['Poppins']"><i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Watch Ad to Revive 1 Loss</button>`;
             if (window.lucide) window.lucide.createIcons();
 
             setTimeout(() => {
@@ -521,8 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
             triggerConfetti();
             window.walletManager.addLevelReward(state.currentLevel);
             resultTitle.textContent = `LEVEL ${state.currentLevel} CLEARED! 👑`;
-            resultTitle.className = 'text-xl font-black mb-1 text-amber-300 font-["Poppins"]';
-            resultDesc.innerHTML = `Spectacular! You won 8 matches in this level!<br><b class="text-emerald-400 text-sm font-['Poppins']">+20 BDT Added to your Wallet!</b>`;
+            resultTitle.className = 'text-lg font-black mb-1 text-amber-300 font-["Poppins"]';
+            resultDesc.innerHTML = `Spectacular! You won 8 matches!<br><b class="text-emerald-400 text-sm font-['Poppins']">+20 BDT Added to your Wallet!</b>`;
 
             nextMatchBtn.textContent = `START LEVEL ${state.currentLevel + 1}`;
             nextMatchBtn.onclick = () => {
@@ -538,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Normal match advance
+        // Advance to next match
         nextMatchBtn.textContent = 'PLAY NEXT MATCH';
         nextMatchBtn.onclick = () => {
             state.currentMatchIndex = Math.min(state.currentMatchIndex + 1, 9);
@@ -549,10 +586,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetBoardForNextMatch() {
+        if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
         ludoGame.reset();
         snakeGame.reset();
         switchToPlayerTurn();
-        diceValueDisplay.textContent = '🎲';
+        user3DDice.className = 'cube-3d show-face-1';
+        bot3DDice.className = 'cube-3d show-face-1';
     }
 
     // WALLET MODAL ACTIONS
@@ -588,6 +627,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Start App
     startSplashScreen();
 });

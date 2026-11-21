@@ -43,10 +43,11 @@ class SnakesLaddersGame {
 
     initCanvas() {
         const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.getBoundingClientRect();
-        const size = Math.min(rect.width || 380, 400);
+        const rect = this.canvas.parentElement ? this.canvas.parentElement.getBoundingClientRect() : this.canvas.getBoundingClientRect();
+        const size = Math.min(rect.width || 360, rect.height || 360, 400);
         this.canvas.width = size * dpr;
         this.canvas.height = size * dpr;
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.scale(dpr, dpr);
         this.tileSize = size / 10;
         this.renderSize = size;
@@ -256,8 +257,22 @@ class SnakesLaddersGame {
     }
 
     playTurn(diceRoll, isBot, callback) {
-        if (this.isMoving || this.isGameOver) return;
         this.isMoving = true;
+        let finished = false;
+        const safeCb = () => {
+            if (!finished) {
+                finished = true;
+                this.isMoving = false;
+                if (callback) callback();
+            }
+        };
+
+        const watchdog = setTimeout(() => {
+            if (!finished) {
+                console.warn('Snakes playTurn watchdog triggered');
+                safeCb();
+            }
+        }, 2500);
 
         const currentPos = isBot ? this.botPos : this.playerPos;
         let targetPos = currentPos + diceRoll;
@@ -267,8 +282,7 @@ class SnakesLaddersGame {
         }
 
         this.animateMove(!isBot, currentPos, targetPos, () => {
-            this.isMoving = false;
-
+            clearTimeout(watchdog);
             const finalPos = isBot ? this.botPos : this.playerPos;
             if (finalPos === 100) {
                 this.isGameOver = true;
@@ -282,7 +296,7 @@ class SnakesLaddersGame {
                 return;
             }
 
-            if (callback) callback();
+            safeCb();
         });
     }
 }

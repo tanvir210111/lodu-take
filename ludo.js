@@ -39,13 +39,15 @@ class LudoGame {
 
     initCanvas() {
         const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.getBoundingClientRect();
-        const size = Math.min(rect.width || 380, 400);
+        const rect = this.canvas.parentElement ? this.canvas.parentElement.getBoundingClientRect() : this.canvas.getBoundingClientRect();
+        const size = Math.min(rect.width || 360, rect.height || 360, 400);
         this.canvas.width = size * dpr;
         this.canvas.height = size * dpr;
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
         this.ctx.scale(dpr, dpr);
         this.cellSize = size / 15;
         this.renderSize = size;
+        this.setupPathCoordinates();
     }
 
     setupPathCoordinates() {
@@ -404,20 +406,42 @@ class LudoGame {
 
     moveToken(isPlayer, tokenId, diceRoll, callback) {
         this.isMoving = true;
+        let finished = false;
+        const safeCb = (arg) => {
+            if (!finished) {
+                finished = true;
+                this.isMoving = false;
+                if (callback) callback(arg);
+            }
+        };
+
+        // Fail-safe watchdog: never get stuck!
+        const watchdog = setTimeout(() => {
+            if (!finished) {
+                console.warn('Ludo moveToken watchdog triggered');
+                safeCb(false);
+            }
+        }, 2500);
+
         const tokens = isPlayer ? this.playerTokens : this.botTokens;
         const token = tokens[tokenId];
 
+        if (!token) {
+            clearTimeout(watchdog);
+            safeCb(false);
+            return;
+        }
+
         if (token.pos === -1) {
+            clearTimeout(watchdog);
             if (diceRoll === 6) {
                 token.pos = 0;
                 window.audioManager.playMoveStep();
                 this.drawBoard();
-                this.isMoving = false;
-                if (callback) callback(true); // 6 gives extra roll
+                safeCb(true); // 6 gives extra roll
                 return;
             } else {
-                this.isMoving = false;
-                if (callback) callback(false);
+                safeCb(false);
                 return;
             }
         }
@@ -426,8 +450,8 @@ class LudoGame {
         const targetPos = token.pos + diceRoll;
 
         if (targetPos > 56) {
-            this.isMoving = false;
-            if (callback) callback(false);
+            clearTimeout(watchdog);
+            safeCb(false);
             return;
         }
 
@@ -438,18 +462,18 @@ class LudoGame {
                 token.pos = curr;
                 window.audioManager.playMoveStep();
                 this.drawBoard();
-                setTimeout(stepAnim, 110);
+                setTimeout(stepAnim, 90);
             } else {
+                clearTimeout(watchdog);
                 // Reached target
                 if (token.pos === 56) {
                     token.isHome = true;
                 }
 
                 const hasCut = this.checkCutOpponent(isPlayer, token);
-                this.isMoving = false;
 
-                // Check Win (All 4 tokens home)
-                const allHome = tokens.filter(t => t.pos === 56).length >= 2; // Fast win at 2/4 tokens home
+                // Check Win
+                const allHome = tokens.filter(t => t.pos === 56).length >= 2;
                 if (allHome) {
                     this.isGameOver = true;
                     if (isPlayer) {
@@ -462,7 +486,7 @@ class LudoGame {
                     return;
                 }
 
-                if (callback) callback(hasCut || diceRoll === 6);
+                safeCb(hasCut || diceRoll === 6);
             }
         };
         stepAnim();
