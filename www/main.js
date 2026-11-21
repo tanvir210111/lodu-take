@@ -521,19 +521,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (window.lucide) window.lucide.createIcons();
 
-        // 3 LOSSES = RESET TO LEVEL 1 (Revive option removed)
+        const reviveBox = document.getElementById('reviveBox');
+        const reviveBtn = document.getElementById('reviveBtn');
+        if (reviveBox) reviveBox.classList.add('hidden');
+
+        // 3 LOSSES = OFFER REVIVE (WATCH VIDEO) OR RESET TO LEVEL 1
         if (losses >= 3) {
             resultTitle.textContent = 'LEVEL FAILED! (3 LOSSES)';
-            resultDesc.innerHTML = `<span class="text-rose-400 font-bold">You suffered 3 losses! Your run resets to Level 1!</span>`;
+            resultDesc.innerHTML = `<span class="text-rose-400 font-bold">You suffered 3 losses! Watch a video to revive your run!</span>`;
+            
+            if (reviveBox && reviveBtn) {
+                reviveBox.classList.remove('hidden');
+                reviveBtn.disabled = false;
+                reviveBtn.innerHTML = '<i data-lucide="video" class="w-4 h-4"></i><span>WATCH VIDEO TO REVIVE (+1 LIFE)</span>';
+                reviveBtn.onclick = () => {
+                    reviveBtn.disabled = true;
+                    reviveBtn.innerHTML = '<span>Loading Video Ad...</span>';
+                    window.adManager.showRewardedVideo(
+                        () => {
+                            // On completed reward
+                            alert('Video Watched! +1 Life Restored! Continue your quest!');
+                            const lastLossIdx = state.matches.lastIndexOf(false);
+                            if (lastLossIdx !== -1) {
+                                state.matches[lastLossIdx] = null;
+                            }
+                            updateArenaUI();
+                            resultModal.classList.add('hidden');
+                            if (reviveBox) reviveBox.classList.add('hidden');
+                            resetBoardForNextMatch();
+                        },
+                        () => {
+                            alert('Video was skipped or could not load. Reward cancelled.');
+                            reviveBtn.disabled = false;
+                            reviveBtn.innerHTML = '<i data-lucide="video" class="w-4 h-4"></i><span>WATCH VIDEO TO REVIVE (+1 LIFE)</span>';
+                            if (window.lucide) window.lucide.createIcons();
+                        }
+                    );
+                };
+            }
+
             if (window.lucide) window.lucide.createIcons();
 
-            nextMatchBtn.textContent = 'RESET TO LEVEL 1';
+            nextMatchBtn.textContent = 'GIVE UP & RESET TO LEVEL 1';
             nextMatchBtn.onclick = () => {
                 state.currentLevel = 1;
                 state.currentMatchIndex = 0;
                 state.matches = Array(10).fill(null);
                 updateArenaUI();
                 resultModal.classList.add('hidden');
+                if (reviveBox) reviveBox.classList.add('hidden');
                 resetBoardForNextMatch();
             };
             return;

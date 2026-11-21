@@ -12,6 +12,7 @@
   "dependencies": {
     "@capacitor/android": "^8.6.2",
     "@capacitor/cli": "^8.6.2",
-    "@capacitor/core": "^8.6.2"
+    "@capacitor/core": "^8.6.2",
+    "capacitor-unity-ads": "^1.0.0"
   }
 }
