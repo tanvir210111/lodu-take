@@ -79,8 +79,8 @@ const server = http.createServer((req, res) => {
         }
     }
 
-    // Browser play disabled: redirect any attempt to access /play or /index.html back to /
-    if (cleanUrl === '/play' || cleanUrl === '/index.html') {
+    // Browser play disabled: redirect any attempt to access /play, /game or /index.html back to /
+    if (cleanUrl === '/play' || cleanUrl === '/game' || cleanUrl === '/index.html') {
         res.writeHead(302, { 'Location': '/' });
         res.end();
         return;

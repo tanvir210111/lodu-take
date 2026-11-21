@@ -521,25 +521,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (window.lucide) window.lucide.createIcons();
 
-        // 3 LOSSES = RESET TO LEVEL 1
+        // 3 LOSSES = RESET TO LEVEL 1 (Revive option removed)
         if (losses >= 3) {
             resultTitle.textContent = 'LEVEL FAILED! (3 LOSSES)';
-            resultDesc.innerHTML = `<span class="text-rose-400 font-bold">You suffered 3 losses! Your run resets to Level 1!</span><br><button id="reviveAdBtn" class="mt-2 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md inline-flex items-center gap-1 font-['Poppins']"><i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Watch Ad to Revive 1 Loss</button>`;
+            resultDesc.innerHTML = `<span class="text-rose-400 font-bold">You suffered 3 losses! Your run resets to Level 1!</span>`;
             if (window.lucide) window.lucide.createIcons();
-
-            setTimeout(() => {
-                const reviveBtn = document.getElementById('reviveAdBtn');
-                if (reviveBtn) {
-                    reviveBtn.onclick = () => {
-                        window.adManager.showRewardedVideo(() => {
-                            state.matches[state.currentMatchIndex] = null;
-                            updateArenaUI();
-                            resultModal.classList.add('hidden');
-                            resetBoardForNextMatch();
-                        });
-                    };
-                }
-            }, 100);
 
             nextMatchBtn.textContent = 'RESET TO LEVEL 1';
             nextMatchBtn.onclick = () => {
