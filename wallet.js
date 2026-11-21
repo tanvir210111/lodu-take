@@ -42,6 +42,14 @@ class WalletManager {
         return this.data.balance;
     }
 
+    addBonus(amount) {
+        const bonus = Number(amount) || 5;
+        this.data.balance += bonus;
+        this.data.totalEarned += bonus;
+        this.saveData();
+        return this.data.balance;
+    }
+
     canWithdraw(amount) {
         return amount >= this.MIN_WITHDRAW_AMOUNT && amount <= this.data.balance;
     }

@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     const state = {
         user: {
-            name: 'Player 1',
+            name: '',
+            email: '',
+            phone: '',
             avatar: AVATARS[0].url
         },
         currentLevel: 1,
@@ -30,14 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
         isPlayerTurn: true,
         canRoll: true,
         lastDiceValue: 1,
-        soundEnabled: true
+        soundEnabled: true,
+        totalMatchesPlayed: 0,
+        totalWins: 0
     };
 
     function loadUserData() {
         try {
             const savedProfile = localStorage.getItem('lodu_king_user_v1');
             if (savedProfile) {
-                state.user = JSON.parse(savedProfile);
+                state.user = Object.assign(state.user, JSON.parse(savedProfile));
             }
             const savedProgress = localStorage.getItem('lodu_master_save_v1');
             if (savedProgress) {
@@ -45,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.currentLevel = data.currentLevel || 1;
                 state.currentMatchIndex = data.currentMatchIndex || 0;
                 state.matches = data.matches || Array(10).fill(null);
+                state.totalMatchesPlayed = data.totalMatchesPlayed || 0;
+                state.totalWins = data.totalWins || 0;
             }
         } catch (e) {
             console.warn('Could not load user or state', e);
@@ -57,7 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('lodu_master_save_v1', JSON.stringify({
                 currentLevel: state.currentLevel,
                 currentMatchIndex: state.currentMatchIndex,
-                matches: state.matches
+                matches: state.matches,
+                totalMatchesPlayed: state.totalMatchesPlayed,
+                totalWins: state.totalWins
             }));
         } catch (e) {
             console.warn('Could not save user data', e);
@@ -74,23 +82,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const authScreen = document.getElementById('authScreen');
     const avatarPicker = document.getElementById('avatarPicker');
     const playerNameInput = document.getElementById('playerNameInput');
+    const playerEmailInput = document.getElementById('playerEmailInput');
+    const playerPhoneInput = document.getElementById('playerPhoneInput');
+    const authCreateAccountBtn = document.getElementById('authCreateAccountBtn');
     const authPlayGuestBtn = document.getElementById('authPlayGuestBtn');
-    const authGoogleBtn = document.getElementById('authGoogleBtn');
+    const authErrorMsg = document.getElementById('authErrorMsg');
 
     const lobbyScreen = document.getElementById('lobbyScreen');
     const lobbyAvatarImg = document.getElementById('lobbyAvatarImg');
     const lobbyPlayerName = document.getElementById('lobbyPlayerName');
+    const lobbyPlayerEmail = document.getElementById('lobbyPlayerEmail');
     const lobbyLevelBadge = document.getElementById('lobbyLevelBadge');
     const lobbySoundBtn = document.getElementById('lobbySoundBtn');
     const lobbySoundIcon = document.getElementById('lobbySoundIcon');
     const lobbyWalletBadge = document.getElementById('lobbyWalletBadge');
+    const lobbyProfileBtn = document.getElementById('lobbyProfileBtn');
+    const lobbyQuestStatusBadge = document.getElementById('lobbyQuestStatusBadge');
+    const lobbyLevelProgressBar = document.getElementById('lobbyLevelProgressBar');
+    const btnWatchVideoBonus = document.getElementById('btnWatchVideoBonus');
 
     const btnPlayLudoMode = document.getElementById('btnPlayLudoMode');
     const btnPlaySnakeMode = document.getElementById('btnPlaySnakeMode');
     const btnOpenWallet = document.getElementById('btnOpenWallet');
     const btnOpenRules = document.getElementById('btnOpenRules');
+    const footerHomeBtn = document.getElementById('footerHomeBtn');
+    const footerProfileBtn = document.getElementById('footerProfileBtn');
     const footerWalletBtn = document.getElementById('footerWalletBtn');
     const footerSettingsBtn = document.getElementById('footerSettingsBtn');
+
+    // Modals
+    const profileModal = document.getElementById('profileModal');
+    const closeProfileModal = document.getElementById('closeProfileModal');
+    const profileModalAvatar = document.getElementById('profileModalAvatar');
+    const profileModalNameDisplay = document.getElementById('profileModalNameDisplay');
+    const profileModalEmailDisplay = document.getElementById('profileModalEmailDisplay');
+    const editProfileName = document.getElementById('editProfileName');
+    const editProfileEmail = document.getElementById('editProfileEmail');
+    const editProfilePhone = document.getElementById('editProfilePhone');
+    const profileLevelText = document.getElementById('profileLevelText');
+    const saveProfileBtn = document.getElementById('saveProfileBtn');
+
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsModal = document.getElementById('closeSettingsModal');
+    const settingSoundToggle = document.getElementById('settingSoundToggle');
+    const settingVibrateToggle = document.getElementById('settingVibrateToggle');
+    const settingsOpenProfileBtn = document.getElementById('settingsOpenProfileBtn');
+    const settingsOpenRulesBtn = document.getElementById('settingsOpenRulesBtn');
+    const btnResetAccountData = document.getElementById('btnResetAccountData');
 
     const gameScreen = document.getElementById('gameScreen');
     const btnBackToLobby = document.getElementById('btnBackToLobby');
@@ -212,21 +250,57 @@ document.addEventListener('DOMContentLoaded', () => {
             avatarPicker.appendChild(btn);
         });
 
-        playerNameInput.value = state.user.name || 'Player 1';
+        playerNameInput.value = state.user.name || '';
+        if (playerEmailInput) playerEmailInput.value = state.user.email || '';
+        if (playerPhoneInput) playerPhoneInput.value = state.user.phone || '';
     }
 
-    function completeAuth() {
-        const name = playerNameInput.value.trim() || 'Player 1';
-        state.user.name = name;
-        state.user.avatar = selectedAvatarUrl;
-        saveUserData();
+    if (authCreateAccountBtn) {
+        authCreateAccountBtn.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            const email = playerEmailInput.value.trim();
+            const phone = playerPhoneInput ? playerPhoneInput.value.trim() : '';
 
-        authScreen.classList.add('hidden');
-        showLobbyScreen();
+            if (!name) {
+                if (authErrorMsg) {
+                    authErrorMsg.textContent = 'Please enter your Full Name!';
+                    authErrorMsg.classList.remove('hidden');
+                }
+                playerNameInput.focus();
+                return;
+            }
+
+            if (!email || !email.includes('@')) {
+                if (authErrorMsg) {
+                    authErrorMsg.textContent = 'Please enter a valid Email address!';
+                    authErrorMsg.classList.remove('hidden');
+                }
+                playerEmailInput.focus();
+                return;
+            }
+
+            if (authErrorMsg) authErrorMsg.classList.add('hidden');
+            state.user.name = name;
+            state.user.email = email;
+            state.user.phone = phone;
+            state.user.avatar = selectedAvatarUrl;
+            saveUserData();
+
+            authScreen.classList.add('hidden');
+            showLobbyScreen();
+        });
     }
 
-    authPlayGuestBtn.addEventListener('click', completeAuth);
-    authGoogleBtn.addEventListener('click', completeAuth);
+    if (authPlayGuestBtn) {
+        authPlayGuestBtn.addEventListener('click', () => {
+            state.user.name = state.user.name || 'Guest Player';
+            state.user.email = state.user.email || 'guest@loduking.com';
+            state.user.avatar = selectedAvatarUrl;
+            saveUserData();
+            authScreen.classList.add('hidden');
+            showLobbyScreen();
+        });
+    }
 
     // 3. LOBBY FLOW
     function showLobbyScreen() {
@@ -235,8 +309,23 @@ document.addEventListener('DOMContentLoaded', () => {
         gameScreen.classList.add('hidden');
 
         lobbyAvatarImg.src = state.user.avatar;
-        lobbyPlayerName.textContent = state.user.name;
+        lobbyPlayerName.textContent = state.user.name || 'Player 1';
+        if (lobbyPlayerEmail) lobbyPlayerEmail.textContent = state.user.email || 'player@mail.com';
         lobbyLevelBadge.textContent = `LVL ${state.currentLevel}`;
+
+        const wins = state.matches.filter(m => m === true).length;
+        if (lobbyQuestStatusBadge) lobbyQuestStatusBadge.textContent = `Level ${state.currentLevel} of 20`;
+        if (lobbyLevelProgressBar) lobbyLevelProgressBar.style.width = `${Math.min(100, Math.max(10, (wins / 8) * 100))}%`;
+
+        // Update stats grid
+        const statsLevel = document.getElementById('statsLevel');
+        const statsMatches = document.getElementById('statsMatches');
+        const statsWins = document.getElementById('statsWins');
+        const statsCash = document.getElementById('statsCash');
+        if (statsLevel) statsLevel.textContent = state.currentLevel;
+        if (statsMatches) statsMatches.textContent = state.totalMatchesPlayed || 0;
+        if (statsWins) statsWins.textContent = state.totalWins || 0;
+        if (statsCash) statsCash.textContent = `৳${window.walletManager.getBalance()}`;
 
         updateGlobalBalance();
         if (window.lucide) window.lucide.createIcons();
@@ -246,6 +335,136 @@ document.addEventListener('DOMContentLoaded', () => {
         const bal = window.walletManager.getBalance();
         document.querySelectorAll('.globalBalanceText').forEach(el => {
             el.textContent = bal;
+        });
+    }
+
+    // Watch Video Bonus Button
+    if (btnWatchVideoBonus) {
+        btnWatchVideoBonus.addEventListener('click', () => {
+            btnWatchVideoBonus.disabled = true;
+            btnWatchVideoBonus.innerHTML = '<span>Loading...</span>';
+            window.adManager.showRewardedVideo(
+                () => {
+                    window.walletManager.addBonus(5);
+                    triggerConfetti();
+                    alert('🎉 Congratulations! You received +5 BDT Cash Bonus!');
+                    updateGlobalBalance();
+                    showLobbyScreen();
+                    btnWatchVideoBonus.disabled = false;
+                    btnWatchVideoBonus.innerHTML = '<i data-lucide="video" class="w-3.5 h-3.5"></i><span>+5 BDT</span>';
+                    if (window.lucide) window.lucide.createIcons();
+                },
+                () => {
+                    alert('Video was not completed. Reward cancelled.');
+                    btnWatchVideoBonus.disabled = false;
+                    btnWatchVideoBonus.innerHTML = '<i data-lucide="video" class="w-3.5 h-3.5"></i><span>+5 BDT</span>';
+                    if (window.lucide) window.lucide.createIcons();
+                }
+            );
+        });
+    }
+
+    // Profile Modal
+    function openProfileModal() {
+        if (profileModalAvatar) profileModalAvatar.src = state.user.avatar;
+        if (profileModalNameDisplay) profileModalNameDisplay.textContent = state.user.name || 'Player 1';
+        if (profileModalEmailDisplay) profileModalEmailDisplay.textContent = state.user.email || 'No email set';
+        if (editProfileName) editProfileName.value = state.user.name || '';
+        if (editProfileEmail) editProfileEmail.value = state.user.email || '';
+        if (editProfilePhone) editProfilePhone.value = state.user.phone || '';
+        if (profileLevelText) profileLevelText.textContent = `Level ${state.currentLevel}`;
+
+        profileModal.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    if (lobbyProfileBtn) lobbyProfileBtn.addEventListener('click', openProfileModal);
+    if (footerProfileBtn) footerProfileBtn.addEventListener('click', openProfileModal);
+    if (closeProfileModal) {
+        closeProfileModal.addEventListener('click', () => {
+            profileModal.classList.add('hidden');
+        });
+    }
+    if (saveProfileBtn) {
+        saveProfileBtn.addEventListener('click', () => {
+            const newName = editProfileName.value.trim();
+            const newEmail = editProfileEmail.value.trim();
+            const newPhone = editProfilePhone.value.trim();
+            if (newName) state.user.name = newName;
+            if (newEmail) state.user.email = newEmail;
+            if (newPhone) state.user.phone = newPhone;
+            saveUserData();
+            profileModal.classList.add('hidden');
+            showLobbyScreen();
+            alert('Profile updated successfully!');
+        });
+    }
+
+    // Settings Modal
+    function openSettingsModal() {
+        settingsModal.classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    if (footerSettingsBtn) footerSettingsBtn.addEventListener('click', openSettingsModal);
+    if (closeSettingsModal) {
+        closeSettingsModal.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+    }
+
+    if (settingSoundToggle) {
+        settingSoundToggle.addEventListener('click', () => {
+            state.soundEnabled = window.audioManager.toggle();
+            settingSoundToggle.textContent = state.soundEnabled ? 'ON' : 'OFF';
+            settingSoundToggle.className = state.soundEnabled 
+                ? 'px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-black text-[10px]' 
+                : 'px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px]';
+        });
+    }
+
+    let vibrationEnabled = true;
+    if (settingVibrateToggle) {
+        settingVibrateToggle.addEventListener('click', () => {
+            vibrationEnabled = !vibrationEnabled;
+            settingVibrateToggle.textContent = vibrationEnabled ? 'ON' : 'OFF';
+            settingVibrateToggle.className = vibrationEnabled 
+                ? 'px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-black text-[10px]' 
+                : 'px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 font-black text-[10px]';
+        });
+    }
+
+    if (settingsOpenProfileBtn) {
+        settingsOpenProfileBtn.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+            openProfileModal();
+        });
+    }
+
+    if (settingsOpenRulesBtn) {
+        settingsOpenRulesBtn.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+            rulesModal.classList.remove('hidden');
+        });
+    }
+
+    if (btnResetAccountData) {
+        btnResetAccountData.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset your level progress back to Level 1? (Your wallet balance is retained)')) {
+                state.currentLevel = 1;
+                state.currentMatchIndex = 0;
+                state.matches = Array(10).fill(null);
+                saveUserData();
+                settingsModal.classList.add('hidden');
+                showLobbyScreen();
+                alert('Progress reset to Level 1.');
+            }
+        });
+    }
+
+    if (footerHomeBtn) {
+        footerHomeBtn.addEventListener('click', () => {
+            showLobbyScreen();
         });
     }
 
@@ -518,6 +737,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
 
         state.matches[state.currentMatchIndex] = isWin;
+        state.totalMatchesPlayed = (state.totalMatchesPlayed || 0) + 1;
+        if (isWin) {
+            state.totalWins = (state.totalWins || 0) + 1;
+        }
+        saveUserData();
         updateArenaUI();
 
         const wins = state.matches.filter(m => m === true).length;

@@ -61,8 +61,8 @@
                 <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto mb-1.5 text-amber-400 shadow">
                     <i data-lucide="user-check" class="w-5 h-5"></i>
                 </div>
-                <h2 class="text-lg font-black font-['Poppins'] text-white">Player Profile</h2>
-                <p class="text-[11px] text-slate-400">Choose your avatar and enter your name</p>
+                <h2 class="text-lg font-black font-['Poppins'] text-white">Create Player Account</h2>
+                <p class="text-[11px] text-slate-400">Enter your name and email to save your rewards</p>
             </div>
 
             <!-- Avatar Picker -->
@@ -73,22 +73,44 @@
                 </div>
             </div>
 
-            <!-- Nickname -->
-            <div class="mb-3">
-                <label class="block text-[10px] font-bold text-slate-300 mb-1">Your Nickname</label>
+            <!-- Full Name -->
+            <div class="mb-2.5">
+                <label class="block text-[10px] font-bold text-slate-300 mb-1">Full Name</label>
                 <div class="relative">
-                    <input type="text" id="playerNameInput" maxlength="14" placeholder="Enter nickname" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-semibold">
-                    <span class="absolute right-3 top-2 text-[10px] text-slate-500 font-bold">🇧🇩 BD</span>
+                    <input type="text" id="playerNameInput" maxlength="30" placeholder="Enter your full name" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-semibold" required>
+                    <span class="absolute right-3 top-2 text-[10px] text-slate-500 font-bold">👤</span>
                 </div>
             </div>
 
+            <!-- Email Address -->
+            <div class="mb-2.5">
+                <label class="block text-[10px] font-bold text-slate-300 mb-1">Email Address</label>
+                <div class="relative">
+                    <input type="email" id="playerEmailInput" maxlength="50" placeholder="example@gmail.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-semibold" required>
+                    <span class="absolute right-3 top-2 text-[10px] text-slate-500 font-bold">✉️</span>
+                </div>
+            </div>
+
+            <!-- Phone / bKash (Optional) -->
+            <div class="mb-3.5">
+                <label class="block text-[10px] font-bold text-slate-300 mb-1">bKash / Nagad Number (Optional)</label>
+                <div class="relative">
+                    <input type="tel" id="playerPhoneInput" maxlength="14" placeholder="01XXXXXXXXX" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 font-semibold">
+                    <span class="absolute right-3 top-2 text-[10px] text-emerald-400 font-bold">৳ BD</span>
+                </div>
+            </div>
+
+            <!-- Error Feedback -->
+            <div id="authErrorMsg" class="hidden text-rose-400 text-[10px] font-bold text-center mb-2"></div>
+
             <!-- Buttons -->
             <div class="space-y-2">
-                <button id="authPlayGuestBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 font-black text-xs shadow-md transition active:scale-95 font-['Poppins'] tracking-wider">
-                    PLAY AS GUEST
+                <button id="authCreateAccountBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 font-black text-xs shadow-md transition active:scale-95 font-['Poppins'] tracking-wider flex items-center justify-center gap-1.5">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    <span>CREATE ACCOUNT & START</span>
                 </button>
-                <button id="authGoogleBtn" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-600 transition flex items-center justify-center gap-1.5">
-                    <i data-lucide="globe" class="w-3.5 h-3.5 text-emerald-400"></i> Continue with Account
+                <button id="authPlayGuestBtn" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs border border-slate-600 transition flex items-center justify-center gap-1.5">
+                    <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i> Quick Play as Guest
                 </button>
             </div>
         </div>
@@ -97,23 +119,23 @@
     <!-- 3. LOBBY / HOMEPAGE SCREEN -->
     <section id="lobbyScreen" class="h-[100dvh] max-h-[100dvh] flex flex-col justify-between overflow-hidden hidden safe-area-top safe-area-bottom">
         <!-- Header -->
-        <header class="bg-gradient-to-b from-[#1c2541] to-[#0b132b] border-b-2 border-amber-500/30 px-3 py-2 flex items-center justify-between shrink-0 shadow-lg">
-            <div id="lobbyProfileBtn" class="flex items-center space-x-2 cursor-pointer">
+        <header class="bg-gradient-to-b from-[#1c2541] to-[#0b132b] border-b-2 border-amber-500/30 px-3 py-2 flex items-center justify-between shrink-0 shadow-lg z-10">
+            <div id="lobbyProfileBtn" class="flex items-center space-x-2 cursor-pointer hover:opacity-90 transition">
                 <div class="relative">
                     <img id="lobbyAvatarImg" src="https://api.dicebear.com/7.x/bottts/svg?seed=King" alt="avatar" class="w-9 h-9 rounded-full border-2 border-amber-400 bg-slate-800 shadow">
                     <span class="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-black px-1 rounded-full border border-slate-900">VIP</span>
                 </div>
                 <div>
                     <div class="flex items-center gap-1">
-                        <span id="lobbyPlayerName" class="font-extrabold text-xs text-amber-300 font-['Poppins']">Player</span>
+                        <span id="lobbyPlayerName" class="font-extrabold text-xs text-amber-300 font-['Poppins'] truncate max-w-[110px]">Player</span>
                         <span id="lobbyLevelBadge" class="text-[9px] font-black bg-amber-500/20 text-amber-300 px-1 py-0.2 rounded border border-amber-500/30">LVL 1</span>
                     </div>
-                    <div class="text-[9px] text-slate-400">20 Levels • 20 BDT/Level</div>
+                    <div id="lobbyPlayerEmail" class="text-[9px] text-slate-400 truncate max-w-[120px]">player@mail.com</div>
                 </div>
             </div>
 
             <div class="flex items-center space-x-2">
-                <button id="lobbySoundBtn" class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 hover:bg-slate-700 transition">
+                <button id="lobbySoundBtn" class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 hover:bg-slate-700 transition" title="Toggle Sound">
                     <i id="lobbySoundIcon" data-lucide="volume-2" class="w-3.5 h-3.5"></i>
                 </button>
                 <div id="lobbyWalletBadge" class="flex items-center space-x-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 px-2.5 py-1 rounded-full cursor-pointer hover:brightness-110 shadow-md border border-emerald-400/40 active:scale-95 transition">
@@ -124,26 +146,44 @@
             </div>
         </header>
 
-        <!-- Main Body -->
-        <div class="flex-1 max-w-sm mx-auto w-full px-3 py-2 flex flex-col justify-center gap-2.5 overflow-y-auto">
-            <!-- Quest Banner -->
-            <div class="bg-gradient-to-r from-amber-900/40 via-yellow-900/30 to-amber-900/40 border-2 border-amber-500/50 rounded-2xl p-2.5 shadow-lg flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-                        <i data-lucide="trophy" class="w-4 h-4"></i>
+        <!-- Main Body (Scrollable Detailed Content) -->
+        <div class="flex-1 max-w-sm mx-auto w-full px-3 py-2 space-y-2.5 overflow-y-auto">
+            <!-- Level Roadmap & Progress Card -->
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-2 border-amber-500/40 rounded-2xl p-3 shadow-lg">
+                <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="crown" class="w-4 h-4 text-amber-400"></i>
+                        <span class="text-xs font-black text-white font-['Poppins']">LEVEL JOURNEY</span>
                     </div>
-                    <div>
-                        <div class="text-[11px] font-black text-amber-300 font-['Poppins']">200 MATCH QUEST</div>
-                        <div class="text-[9px] text-slate-300">Win 8 of 10 to clear level • 3 losses resets to Lvl 1</div>
-                    </div>
+                    <span id="lobbyQuestStatusBadge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 font-['Poppins']">Level 1 of 20</span>
                 </div>
-                <div class="text-right">
-                    <div class="text-xs font-black text-emerald-400">+20 BDT</div>
-                    <div class="text-[8px] text-slate-400">per level</div>
+                <div class="flex items-center justify-between text-[10px] text-slate-300 mb-1">
+                    <span>Target: Win 8 of 10 matches</span>
+                    <span class="text-emerald-400 font-bold">+20 BDT Cash</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-700">
+                    <div id="lobbyLevelProgressBar" class="bg-gradient-to-r from-amber-400 to-emerald-400 h-full rounded-full transition-all duration-300" style="width: 10%;"></div>
                 </div>
             </div>
 
-            <!-- Card 1: Ludo -->
+            <!-- Unity Ads Watch Video Bonus Card -->
+            <div class="bg-gradient-to-r from-emerald-950/80 via-teal-950/90 to-slate-900 border-2 border-emerald-500/50 rounded-2xl p-2.5 shadow-lg flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                        <i data-lucide="play-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-black text-emerald-300 font-['Poppins']">WATCH VIDEO BONUS</div>
+                        <div class="text-[9px] text-slate-300">Watch short video & get instant coins!</div>
+                    </div>
+                </div>
+                <button id="btnWatchVideoBonus" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-black text-[10px] shadow transition active:scale-95 font-['Poppins'] flex items-center gap-1">
+                    <i data-lucide="video" class="w-3.5 h-3.5"></i>
+                    <span>+5 BDT</span>
+                </button>
+            </div>
+
+            <!-- Card 1: Ludo King Quest -->
             <div id="btnPlayLudoMode" class="bg-gradient-to-br from-blue-900/80 via-indigo-950 to-slate-900 border-2 border-blue-500/50 hover:border-blue-400 rounded-2xl p-3 shadow-xl cursor-pointer transition active:scale-98">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2.5">
@@ -151,16 +191,19 @@
                             <i data-lucide="dices" class="w-6 h-6 text-white"></i>
                         </div>
                         <div>
-                            <span class="text-[9px] font-bold text-blue-300 uppercase tracking-wider">Classic Board</span>
-                            <h3 class="text-sm font-black text-white font-['Poppins']">VS COMPUTER (LUDO)</h3>
-                            <p class="text-[10px] text-slate-300">Play authentic 1v1 Ludo against AI</p>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[9px] font-bold text-blue-300 uppercase tracking-wider">15x15 Classic</span>
+                                <span class="text-[8px] bg-blue-500/20 text-blue-300 px-1 rounded font-bold">10 Matches</span>
+                            </div>
+                            <h3 class="text-sm font-black text-white font-['Poppins']">LUDO KING QUEST</h3>
+                            <p class="text-[10px] text-slate-300">Win 8 matches to clear level & claim ৳20</p>
                         </div>
                     </div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-blue-300"></i>
                 </div>
             </div>
 
-            <!-- Card 2: Snakes -->
+            <!-- Card 2: Snakes & Ladders -->
             <div id="btnPlaySnakeMode" class="bg-gradient-to-br from-emerald-900/80 via-teal-950 to-slate-900 border-2 border-emerald-500/50 hover:border-emerald-400 rounded-2xl p-3 shadow-xl cursor-pointer transition active:scale-98">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2.5">
@@ -168,16 +211,19 @@
                             <i data-lucide="trending-up" class="w-6 h-6 text-white"></i>
                         </div>
                         <div>
-                            <span class="text-[9px] font-bold text-emerald-300 uppercase tracking-wider">100 Tiles Arena</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[9px] font-bold text-emerald-300 uppercase tracking-wider">100 Tiles Arena</span>
+                                <span class="text-[8px] bg-emerald-500/20 text-emerald-300 px-1 rounded font-bold">Fast Pace</span>
+                            </div>
                             <h3 class="text-sm font-black text-white font-['Poppins']">SNAKES & LADDERS</h3>
-                            <p class="text-[10px] text-slate-300">Climb ladders, dodge snakes & win</p>
+                            <p class="text-[10px] text-slate-300">Climb ladders, dodge snakes & win cash</p>
                         </div>
                     </div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-300"></i>
                 </div>
             </div>
 
-            <!-- Card 3: Wallet -->
+            <!-- Card 3: Wallet Quick Card -->
             <div id="btnOpenWallet" class="bg-gradient-to-br from-amber-900/70 via-slate-900 to-slate-900 border-2 border-amber-500/50 hover:border-amber-400 rounded-2xl p-3 shadow-xl cursor-pointer transition active:scale-98">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2.5">
@@ -194,7 +240,64 @@
                 </div>
             </div>
 
-            <!-- Rules -->
+            <!-- Quick Player Stats Grid -->
+            <div class="grid grid-cols-4 gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl p-2 text-center">
+                <div class="bg-slate-950/60 p-1.5 rounded-xl border border-slate-800">
+                    <div id="statsLevel" class="text-xs font-black text-amber-400 font-['Poppins']">1</div>
+                    <div class="text-[8px] text-slate-400">Level</div>
+                </div>
+                <div class="bg-slate-950/60 p-1.5 rounded-xl border border-slate-800">
+                    <div id="statsMatches" class="text-xs font-black text-blue-400 font-['Poppins']">0</div>
+                    <div class="text-[8px] text-slate-400">Matches</div>
+                </div>
+                <div class="bg-slate-950/60 p-1.5 rounded-xl border border-slate-800">
+                    <div id="statsWins" class="text-xs font-black text-emerald-400 font-['Poppins']">0</div>
+                    <div class="text-[8px] text-slate-400">Wins</div>
+                </div>
+                <div class="bg-slate-950/60 p-1.5 rounded-xl border border-slate-800">
+                    <div id="statsCash" class="text-xs font-black text-amber-300 font-['Poppins']">৳0</div>
+                    <div class="text-[8px] text-slate-400">Earned</div>
+                </div>
+            </div>
+
+            <!-- Daily Top Earners Leaderboard Preview -->
+            <div class="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-2.5 shadow">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1.5 text-xs font-black text-amber-400 font-['Poppins']">
+                        <i data-lucide="award" class="w-3.5 h-3.5"></i>
+                        <span>TODAY'S TOP WINNERS</span>
+                    </div>
+                    <span class="text-[8px] text-emerald-400 font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded">Live BDT</span>
+                </div>
+                <div class="space-y-1.5 text-[10px]">
+                    <div class="flex items-center justify-between bg-slate-950/70 p-1.5 rounded-xl border border-slate-800">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-full bg-amber-400 text-slate-950 font-black text-[9px] flex items-center justify-center">1</span>
+                            <span class="font-bold text-white">Rakib_King</span>
+                            <span class="text-[8px] text-slate-400">LVL 16</span>
+                        </div>
+                        <span class="font-black text-emerald-400 font-['Poppins']">৳420 BDT</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-slate-950/70 p-1.5 rounded-xl border border-slate-800">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-full bg-slate-300 text-slate-950 font-black text-[9px] flex items-center justify-center">2</span>
+                            <span class="font-bold text-white">Tanvir_Pro</span>
+                            <span class="text-[8px] text-slate-400">LVL 12</span>
+                        </div>
+                        <span class="font-black text-emerald-400 font-['Poppins']">৳320 BDT</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-slate-950/70 p-1.5 rounded-xl border border-slate-800">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-full bg-amber-700 text-white font-black text-[9px] flex items-center justify-center">3</span>
+                            <span class="font-bold text-white">Mim_LudoQueen</span>
+                            <span class="text-[8px] text-slate-400">LVL 9</span>
+                        </div>
+                        <span class="font-black text-emerald-400 font-['Poppins']">৳240 BDT</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rules & Guidelines Shortcut -->
             <div id="btnOpenRules" class="flex items-center justify-between bg-slate-900/80 border border-slate-700/80 rounded-xl px-3 py-2 cursor-pointer hover:bg-slate-800 transition">
                 <div class="flex items-center space-x-2 text-[11px] text-slate-300 font-semibold">
                     <i data-lucide="help-circle" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -205,10 +308,14 @@
         </div>
 
         <!-- Footer -->
-        <footer class="bg-[#1c2541]/90 border-t border-slate-700 px-4 py-1.5 flex items-center justify-around shrink-0 max-w-sm mx-auto w-full">
-            <button class="flex flex-col items-center text-amber-400 text-[9px] font-bold">
+        <footer class="bg-[#1c2541]/95 border-t border-slate-700 px-4 py-1.5 flex items-center justify-around shrink-0 max-w-sm mx-auto w-full z-10">
+            <button id="footerHomeBtn" class="flex flex-col items-center text-amber-400 text-[9px] font-bold">
                 <i data-lucide="home" class="w-4 h-4 mb-0.5"></i>
                 <span>Home</span>
+            </button>
+            <button id="footerProfileBtn" class="flex flex-col items-center text-slate-400 hover:text-white text-[9px] font-bold">
+                <i data-lucide="user" class="w-4 h-4 mb-0.5"></i>
+                <span>Profile</span>
             </button>
             <button id="footerWalletBtn" class="flex flex-col items-center text-slate-400 hover:text-white text-[9px] font-bold">
                 <i data-lucide="credit-card" class="w-4 h-4 mb-0.5"></i>
@@ -459,6 +566,141 @@
                     <b>200 BDT</b> via bKash, Nagad, or Rocket.
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- PROFILE MODAL -->
+    <div id="profileModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-800 border-2 border-amber-500/40 w-full max-w-sm rounded-3xl p-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button id="closeProfileModal" class="absolute top-3 right-3 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            
+            <div class="text-center mb-3">
+                <div class="relative inline-block mb-1.5">
+                    <img id="profileModalAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=King" class="w-14 h-14 rounded-full border-2 border-amber-400 bg-slate-900 shadow">
+                    <span class="absolute bottom-0 right-0 bg-emerald-500 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-full border border-slate-900">VERIFIED</span>
+                </div>
+                <h3 id="profileModalNameDisplay" class="text-sm font-black text-white font-['Poppins']">Player Name</h3>
+                <div id="profileModalEmailDisplay" class="text-[10px] text-slate-400">player@gmail.com</div>
+            </div>
+
+            <!-- Profile Edit Form -->
+            <div class="space-y-2 mb-3">
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 mb-0.5">Full Name</label>
+                    <input type="text" id="editProfileName" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 mb-0.5">Email Address</label>
+                    <input type="email" id="editProfileEmail" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 mb-0.5">Payout Phone / bKash</label>
+                    <input type="tel" id="editProfilePhone" placeholder="01XXXXXXXXX" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                </div>
+            </div>
+
+            <!-- Quick Stats in Profile -->
+            <div class="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-2xl border border-slate-700/80 mb-3 text-center">
+                <div>
+                    <div class="text-[9px] text-slate-400">Current Level</div>
+                    <div id="profileLevelText" class="text-xs font-black text-amber-400 font-['Poppins']">Level 1</div>
+                </div>
+                <div>
+                    <div class="text-[9px] text-slate-400">Wallet Balance</div>
+                    <div class="text-xs font-black text-emerald-400 font-['Poppins']">৳<span class="globalBalanceText">0</span> BDT</div>
+                </div>
+            </div>
+
+            <button id="saveProfileBtn" class="w-full py-2 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-slate-950 font-black text-xs shadow hover:brightness-110 transition font-['Poppins']">
+                SAVE PROFILE CHANGES
+            </button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-800 border-2 border-slate-700 w-full max-w-sm rounded-3xl p-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button id="closeSettingsModal" class="absolute top-3 right-3 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-xl bg-slate-700 flex items-center justify-center text-amber-400">
+                    <i data-lucide="sliders" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-white font-['Poppins']">Game Settings</h3>
+                    <p class="text-[10px] text-slate-400">Audio, Preferences & Support</p>
+                </div>
+            </div>
+
+            <div class="space-y-2 mb-3">
+                <!-- Sound Effects Toggle -->
+                <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-2xl border border-slate-700">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="volume-2" class="w-4 h-4 text-emerald-400"></i>
+                        <div>
+                            <div class="text-xs font-bold text-white">Sound Effects (SFX)</div>
+                            <div class="text-[9px] text-slate-400">Dice roll, win/loss tones</div>
+                        </div>
+                    </div>
+                    <button id="settingSoundToggle" class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-black text-[10px]">
+                        ON
+                    </button>
+                </div>
+
+                <!-- Vibration / Haptics Toggle -->
+                <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-2xl border border-slate-700">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="smartphone" class="w-4 h-4 text-amber-400"></i>
+                        <div>
+                            <div class="text-xs font-bold text-white">Vibration & Haptics</div>
+                            <div class="text-[9px] text-slate-400">Vibrate on dice rolls & cuts</div>
+                        </div>
+                    </div>
+                    <button id="settingVibrateToggle" class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-black text-[10px]">
+                        ON
+                    </button>
+                </div>
+
+                <!-- Shortcuts in Settings -->
+                <button id="settingsOpenProfileBtn" class="w-full flex items-center justify-between bg-slate-900 p-2.5 rounded-2xl border border-slate-700 hover:bg-slate-700/50 transition">
+                    <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+                        <i data-lucide="user" class="w-4 h-4 text-blue-400"></i>
+                        <span>Account & Profile Details</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+
+                <button id="settingsOpenRulesBtn" class="w-full flex items-center justify-between bg-slate-900 p-2.5 rounded-2xl border border-slate-700 hover:bg-slate-700/50 transition">
+                    <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+                        <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
+                        <span>Game Rules & Payout Policy</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+
+                <!-- Help / Support -->
+                <a href="https://t.me/lodukingquest" target="_blank" class="w-full flex items-center justify-between bg-slate-900 p-2.5 rounded-2xl border border-slate-700 hover:bg-slate-700/50 transition">
+                    <div class="flex items-center gap-2 text-xs font-bold text-slate-200">
+                        <i data-lucide="message-circle" class="w-4 h-4 text-teal-400"></i>
+                        <span>Customer Support Helpline</span>
+                    </div>
+                    <span class="text-[9px] text-teal-400 font-bold bg-teal-500/20 px-1.5 py-0.5 rounded">24/7 Help</span>
+                </a>
+            </div>
+
+            <!-- Version & Reset -->
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 text-center mb-3">
+                <div class="text-[10px] text-slate-400 font-mono">App Version: v1.2.0 (Unity Ads Engine)</div>
+                <div class="text-[9px] text-emerald-400 font-semibold">Server Status: Online • Protected</div>
+            </div>
+
+            <button id="btnResetAccountData" class="w-full py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold transition">
+                RESET GAME DATA
+            </button>
         </div>
     </div>
 
