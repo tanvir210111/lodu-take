@@ -1,4 +1,4 @@
-// Live Production Server: Game Download Landing, APK Direct Distribution & DuckDNS IP Auto-Sync
+// Live Production Server: App Download Page Only (Browser Play Disabled)
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +23,7 @@ function updateDuckDNS() {
 }
 
 updateDuckDNS();
-setInterval(updateDuckDNS, 10 * 60 * 1000); // Sync every 10 mins
+setInterval(updateDuckDNS, 10 * 60 * 1000);
 
 // MIME Types
 const MIME_TYPES = {
@@ -39,7 +39,6 @@ const MIME_TYPES = {
 
 // 2. HTTP Server Router
 const server = http.createServer((req, res) => {
-    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -59,7 +58,7 @@ const server = http.createServer((req, res) => {
             status: 'online',
             domain: `${DUCKDNS_DOMAIN}.duckdns.org`,
             version: '1.0.3',
-            downloadUrl: `http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/Lodu_Master_Reward_Game.apk`,
+            downloadUrl: `http://${DUCKDNS_DOMAIN}.duckdns.org/Lodu_Master_Reward_Game.apk`,
             updatedAt: new Date().toISOString()
         }));
         return;
@@ -80,7 +79,14 @@ const server = http.createServer((req, res) => {
         }
     }
 
-    // Route: Landing & Download Page (Root / or /download)
+    // Browser play disabled: redirect any attempt to access /play or /index.html back to /
+    if (cleanUrl === '/play' || cleanUrl === '/index.html') {
+        res.writeHead(302, { 'Location': '/' });
+        res.end();
+        return;
+    }
+
+    // Root / or /download serves Download Landing Page
     if (cleanUrl === '/' || cleanUrl === '/download') {
         const landingPath = path.join(__dirname, 'landing.html');
         if (fs.existsSync(landingPath)) {
@@ -90,15 +96,7 @@ const server = http.createServer((req, res) => {
         }
     }
 
-    // Route: Play Game in Web (/play)
-    if (cleanUrl === '/play') {
-        const gamePath = path.join(__dirname, 'index.html');
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        fs.createReadStream(gamePath).pipe(res);
-        return;
-    }
-
-    // Static Assets
+    // Static Assets (CSS, JS, images)
     let filePath = path.join(__dirname, cleanUrl);
     if (!fs.existsSync(filePath)) {
         filePath = path.join(__dirname, 'www', cleanUrl);
@@ -110,16 +108,17 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': contentType });
         fs.createReadStream(filePath).pipe(res);
     } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('404 Not Found');
+        // Fallback redirect to home download page
+        res.writeHead(302, { 'Location': '/' });
+        res.end();
     }
 });
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`=======================================================`);
-    console.log(`🚀 LUDO KING DOWNLOAD & GAME SERVER LIVE ON PORT ${PORT}`);
-    console.log(`🌐 Live Download Page: http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}`);
-    console.log(`🎮 Play in Browser:    http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/play`);
-    console.log(`📦 Direct APK URL:     http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/Lodu_Master_Reward_Game.apk`);
+    console.log(`📱 LUDO KING APP DOWNLOAD SERVER LIVE ON PORT ${PORT}`);
+    console.log(`🌐 Download Landing: http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}`);
+    console.log(`📦 Direct APK URL:   http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/Lodu_Master_Reward_Game.apk`);
+    console.log(`🔒 Browser Play:     DISABLED (App Download Only)`);
     console.log(`=======================================================`);
 });
