@@ -36,15 +36,15 @@ fi
 # 6. Install dependencies
 sudo npm install --production
 
-# 7. Start/Restart with PM2 on Port 80 (Standard Web Port)
-export PORT=80
-sudo PORT=80 pm2 start server.js --name "lodutake" --update-env || sudo PORT=80 pm2 restart "lodutake"
+# 7. Start/Restart with PM2 on Port 10000 (Safe Isolated Port)
+export PORT=10000
+sudo PORT=10000 pm2 start server.js --name "lodutake" --update-env || sudo PORT=10000 pm2 restart "lodutake"
 sudo pm2 save
 sudo pm2 startup
 
 echo "=========================================================="
 echo "🎉 DEPLOYMENT SUCCESSFUL!"
-echo "🌐 Live Download Page: http://lodutake.duckdns.org"
-echo "🎮 Play Online Game:   http://lodutake.duckdns.org/play"
-echo "📦 Direct APK Link:    http://lodutake.duckdns.org/Lodu_Master_Reward_Game.apk"
+echo "🌐 Live Download Page: http://lodutake.duckdns.org:10000"
+echo "🎮 Play Online Game:   http://lodutake.duckdns.org:10000/play"
+echo "📦 Direct APK Link:    http://lodutake.duckdns.org:10000/Lodu_Master_Reward_Game.apk"
 echo "=========================================================="

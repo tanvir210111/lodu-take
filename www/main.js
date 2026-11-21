@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. SPLASH SCREEN FLOW
     function checkLiveOTA() {
-        fetch('http://lodutake.duckdns.org:3000/api/ota/check')
+        fetch('http://lodutake.duckdns.org:10000/api/ota/check')
             .then(res => res.json())
             .then(data => {
                 console.log('[Live OTA] Server connected:', data);

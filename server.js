@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 const DUCKDNS_DOMAIN = 'lodutake';
 const DUCKDNS_TOKEN = 'e4e86164-a489-442f-b08c-0f6ff9981a21';
 
