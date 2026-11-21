@@ -1,0 +1,15 @@
+{
+  "appId": "com.lodumaster.app",
+  "appName": "Lodu King",
+  "webDir": "www",
+  "server": {
+    "cleartext": true,
+    "allowNavigation": [
+      "lodutake.duckdns.org",
+      "*.duckdns.org",
+      "api.dicebear.com",
+      "quge5.com",
+      "*.quge5.com"
+    ]
+  }
+}
