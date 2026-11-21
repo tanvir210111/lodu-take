@@ -1,54 +1,39 @@
-// Unity Ads & Monetag Dual Advertising Controller
-class AdManager {
+// Unity Ads Native Advertising Controller
+class UnityAdManager {
     constructor() {
         this.gameId = '800447683';
         this.rewardedPlacement = 'BP_Rewarded_Android';
         this.interstitialPlacement = 'BP_Interstitial_Android';
         this.bannerPlacement = 'BP_Banner_Android';
 
-        this.inPagePushEl = document.getElementById('inPagePushBanner');
-        this.inPageCloseBtn = document.getElementById('inPagePushClose');
-        
         this.unityInitialized = false;
         this.isNative = false;
 
-        this.initEventListeners();
         this.initUnityAds();
     }
 
-    initEventListeners() {
-        if (this.inPageCloseBtn && this.inPagePushEl) {
-            this.inPageCloseBtn.addEventListener('click', () => {
-                this.inPagePushEl.style.display = 'none';
-                setTimeout(() => {
-                    this.inPagePushEl.style.display = 'flex';
-                }, 40000);
-            });
-        }
-    }
-
     async initUnityAds() {
-        // Detect native capacitor platform
+        // Detect native Capacitor environment
         if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
             this.isNative = true;
         }
 
-        console.log('[AdManager] Initializing... Native mode:', this.isNative);
+        console.log('[UnityAds] Platform check. Native mode:', this.isNative);
 
         if (this.isNative && window.Capacitor?.Plugins?.Unityads) {
             try {
-                console.log('[UnityAds] Initializing Game ID:', this.gameId);
+                console.log('[UnityAds] Initializing Unity Ads with Game ID:', this.gameId);
                 await window.Capacitor.Plugins.Unityads.initialize({
                     gameId: this.gameId,
                     testMode: false
                 });
                 this.unityInitialized = true;
-                console.log('[UnityAds] Initialization SUCCESS!');
+                console.log('[UnityAds] Initialized successfully!');
                 
-                // Preload Rewarded and Interstitial ads
+                // Preload video ads
                 this.preloadAds();
             } catch (err) {
-                console.warn('[UnityAds] Initialization error:', err);
+                console.warn('[UnityAds] Init error:', err);
             }
         }
     }
@@ -75,18 +60,17 @@ class AdManager {
         }
     }
 
-    // Rewarded Video: For Revive option
+    // Rewarded Video: Revive player when losing 3 matches
     async showRewardedVideo(onSuccess, onFailure) {
-        console.log('[AdManager] showRewardedVideo called');
+        console.log('[UnityAds] showRewardedVideo called');
         if (this.isNative && window.Capacitor?.Plugins?.Unityads) {
             try {
-                // Ensure ad is requested
                 await window.Capacitor.Plugins.Unityads.loadRewardedVideo({
                     placementId: this.rewardedPlacement
                 }).catch(() => {});
 
                 const result = await window.Capacitor.Plugins.Unityads.showRewardedVideo();
-                console.log('[UnityAds] Show Rewarded Result:', result);
+                console.log('[UnityAds] Rewarded Video result:', result);
                 
                 if (result && result.success) {
                     if (typeof onSuccess === 'function') onSuccess();
@@ -94,27 +78,26 @@ class AdManager {
                     if (typeof onFailure === 'function') onFailure();
                 }
 
-                // Preload next video in background
+                // Preload next ad
                 setTimeout(() => this.preloadAds(), 2000);
                 return;
             } catch (err) {
-                console.error('[UnityAds] Show rewarded error:', err);
-                // Graceful fallback: grant reward so user isn't stuck
+                console.error('[UnityAds] Rewarded show error:', err);
                 if (typeof onSuccess === 'function') onSuccess();
                 return;
             }
         }
 
-        // Web/Browser fallback: simulate rewarded video modal or complete immediately
-        console.log('[AdManager] Web fallback: granting reward');
+        // Web / fallback behavior
+        console.log('[UnityAds] Web fallback: reward granted');
         if (typeof onSuccess === 'function') {
             onSuccess();
         }
     }
 
-    // Interstitial / Vignette Ad
-    async showVignetteAd(onClosed) {
-        console.log('[AdManager] showVignetteAd called');
+    // Interstitial Ad: after match ends
+    async showInterstitialAd(onClosed) {
+        console.log('[UnityAds] showInterstitialAd called');
         if (this.isNative && window.Capacitor?.Plugins?.Unityads) {
             try {
                 await window.Capacitor.Plugins.Unityads.loadInterstitial({
@@ -125,16 +108,7 @@ class AdManager {
                 console.log('[UnityAds] Interstitial Shown');
                 setTimeout(() => this.preloadAds(), 2000);
             } catch (err) {
-                console.warn('[UnityAds] Show interstitial error:', err);
-            }
-        } else {
-            // Web fallback: Monetag Vignette
-            if (typeof window.show_vignette === 'function') {
-                try {
-                    window.show_vignette();
-                } catch (e) {
-                    console.warn('Monetag vignette trigger error', e);
-                }
+                console.warn('[UnityAds] Interstitial error:', err);
             }
         }
 
@@ -142,6 +116,11 @@ class AdManager {
             onClosed();
         }
     }
+
+    // Alias for backwards compatibility
+    showVignetteAd(onClosed) {
+        return this.showInterstitialAd(onClosed);
+    }
 }
 
-window.adManager = new AdManager();
+window.adManager = new UnityAdManager();
