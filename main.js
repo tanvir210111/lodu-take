@@ -390,6 +390,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchToBotTurn() {
         state.isPlayerTurn = false;
+        state.canRoll = false;
+        rollDiceBtn.disabled = true;
+
         userAvatarWrapper.classList.remove('turn-active-ring');
         botAvatarWrapper.classList.add('bot-turn-active-ring');
 
@@ -398,68 +401,87 @@ document.addEventListener('DOMContentLoaded', () => {
         userTurnHint.textContent = 'Computer is thinking...';
         botStatusLabel.textContent = 'Rolling 3D dice...';
 
-        // Clear any old watchdog
+        // Re-arm watchdog: return turn if bot takes > 4.5s
         if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
-
-        // Fail-safe global watchdog: if bot takes > 4.5s, force back to player!
         botWatchdogTimer = setTimeout(() => {
-            console.warn('[Watchdog] Bot turn timeout, returning turn to player');
+            console.warn('[Watchdog] Bot turn timeout, forcing turn to player');
             switchToPlayerTurn();
         }, 4500);
 
         setTimeout(() => {
             executeBotTurn();
-        }, 600);
+        }, 450);
     }
 
     function executeBotTurn() {
-        const diceVal = window.AIEngine.rollDice(true, state.currentLevel, {});
-        state.lastDiceValue = diceVal;
+        // ALWAYS re-arm watchdog for EVERY bot turn & extra roll
+        if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+        botWatchdogTimer = setTimeout(() => {
+            console.warn('[Watchdog] Bot execute watchdog fired, returning turn');
+            switchToPlayerTurn();
+        }, 4000);
 
-        // Roll Computer 3D dice
-        roll3DDice(bot3DDice, diceVal, () => {
-            botStatusLabel.textContent = `Rolled ${diceVal}!`;
+        try {
+            let diceVal = 1;
+            try {
+                diceVal = window.AIEngine.rollDice(true, state.currentLevel, {});
+            } catch (e) {
+                diceVal = Math.floor(Math.random() * 6) + 1;
+            }
+            if (!diceVal || isNaN(diceVal)) diceVal = Math.floor(Math.random() * 6) + 1;
+            state.lastDiceValue = diceVal;
 
-            if (state.currentMode === 'snake') {
-                botStatusLabel.textContent = `Moving ${diceVal} steps...`;
-                snakeGame.playTurn(diceVal, true, () => {
-                    if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
-                    switchToPlayerTurn();
-                });
-            } else {
-                // Ludo Mode
-                const movable = ludoGame.getMovableTokens(false, diceVal);
+            botStatusLabel.textContent = 'Rolling 3D dice...';
 
-                if (movable.length === 0) {
-                    botStatusLabel.textContent = `Rolled ${diceVal} (No moves!)`;
-                    setTimeout(() => {
+            // Roll Computer 3D dice
+            roll3DDice(bot3DDice, diceVal, () => {
+                botStatusLabel.textContent = `Rolled ${diceVal}!`;
+
+                if (state.currentMode === 'snake') {
+                    botStatusLabel.textContent = `Moving ${diceVal} steps...`;
+                    snakeGame.playTurn(diceVal, true, () => {
                         if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
                         switchToPlayerTurn();
-                    }, 650);
-                    return;
-                }
+                    });
+                } else {
+                    // Ludo Mode
+                    const movable = ludoGame.getMovableTokens(false, diceVal);
 
-                // Bot chooses best token
-                let chosenId = movable[0];
-                for (let id of movable) {
-                    if (ludoGame.botTokens[id].pos > ludoGame.botTokens[chosenId].pos) {
-                        chosenId = id;
+                    if (!movable || movable.length === 0) {
+                        botStatusLabel.textContent = `Rolled ${diceVal} (No moves!)`;
+                        setTimeout(() => {
+                            if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+                            switchToPlayerTurn();
+                        }, 500);
+                        return;
                     }
-                }
 
-                botStatusLabel.textContent = `Moving piece...`;
-                ludoGame.moveToken(false, chosenId, diceVal, (extraTurn) => {
-                    if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
-
-                    if (extraTurn && !ludoGame.isGameOver) {
-                        botStatusLabel.textContent = `Rolled 6 or Cut! Extra turn!`;
-                        setTimeout(() => executeBotTurn(), 650);
-                    } else {
-                        setTimeout(() => switchToPlayerTurn(), 350);
+                    // Bot chooses best token
+                    let chosenId = movable[0];
+                    for (let id of movable) {
+                        if (ludoGame.botTokens[id].pos > ludoGame.botTokens[chosenId].pos) {
+                            chosenId = id;
+                        }
                     }
-                });
-            }
-        });
+
+                    botStatusLabel.textContent = `Moving piece...`;
+                    ludoGame.moveToken(false, chosenId, diceVal, (extraTurn) => {
+                        if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+
+                        if (extraTurn && !ludoGame.isGameOver) {
+                            botStatusLabel.textContent = `Rolled 6 or Cut! Extra turn!`;
+                            setTimeout(() => executeBotTurn(), 600);
+                        } else {
+                            setTimeout(() => switchToPlayerTurn(), 300);
+                        }
+                    });
+                }
+            });
+        } catch (err) {
+            console.error('[Bot] Error during executeBotTurn:', err);
+            if (botWatchdogTimer) clearTimeout(botWatchdogTimer);
+            switchToPlayerTurn();
+        }
     }
 
     function switchToPlayerTurn() {

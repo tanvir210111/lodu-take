@@ -331,26 +331,57 @@ class LudoGame {
     }
 
     bindEvents() {
-        // Click on token to move
-        this.canvas.addEventListener('click', (e) => {
+        const handleInteraction = (e) => {
             if (this.isMoving || this.movableTokenIds.length === 0 || !this.pendingDiceRoll) return;
 
             const rect = this.canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
+            const scaleX = this.renderSize / (rect.width || 1);
+            const scaleY = this.renderSize / (rect.height || 1);
+            const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+            const clickX = (clientX - rect.left) * scaleX;
+            const clickY = (clientY - rect.top) * scaleY;
 
-            // Find if player clicked on a movable token
+            const cs = this.cellSize;
+            // 1. If player clicks anywhere inside Player's Bottom-Left base quadrant (cols 0-6, rows 9-15)
+            if (clickX <= 6 * cs && clickY >= 9 * cs) {
+                const baseTokenId = this.movableTokenIds.find(id => this.playerTokens[id].pos === -1);
+                if (baseTokenId !== undefined) {
+                    this.executePlayerMove(baseTokenId);
+                    return;
+                }
+            }
+
+            // 2. Find if player clicked near any movable token
+            let closestId = null;
+            let minDist = Infinity;
             for (let id of this.movableTokenIds) {
                 const token = this.playerTokens[id];
                 const coord = this.getTokenCoord(true, token);
                 const dist = Math.hypot(clickX - coord.x, clickY - coord.y);
 
-                if (dist <= 20) {
-                    this.executePlayerMove(id);
-                    return;
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestId = id;
                 }
             }
-        });
+
+            // Generous touch tolerance (36px or cell radius)
+            if (closestId !== null && minDist <= Math.max(36, cs * 1.3)) {
+                this.executePlayerMove(closestId);
+                return;
+            }
+
+            // Fallback: If clicked anywhere on canvas and all movable tokens are in base
+            if (this.movableTokenIds.every(id => this.playerTokens[id].pos === -1)) {
+                this.executePlayerMove(this.movableTokenIds[0]);
+            }
+        };
+
+        this.canvas.addEventListener('click', handleInteraction);
+        this.canvas.addEventListener('touchstart', (e) => {
+            handleInteraction(e);
+        }, { passive: true });
     }
 
     // Determine which tokens can move for the given dice roll
@@ -371,37 +402,57 @@ class LudoGame {
     }
 
     promptPlayerMove(diceRoll, callback) {
+        if (this.autoMoveTimer) clearTimeout(this.autoMoveTimer);
         this.pendingDiceRoll = diceRoll;
         this.onMoveCallback = callback;
         this.movableTokenIds = this.getMovableTokens(true, diceRoll);
 
         if (this.movableTokenIds.length === 0) {
-            // No moves possible, pass turn
+            // No moves possible, pass turn smoothly
             this.pendingDiceRoll = null;
             this.drawBoard();
-            setTimeout(() => callback(false), 500);
+            setTimeout(() => callback(false), 400);
             return;
         }
 
-        // If only 1 token can move, auto-move smoothly
-        if (this.movableTokenIds.length === 1) {
+        // Auto-move if only 1 choice OR if all movable choices are identical (all in base)
+        const allInBase = this.movableTokenIds.every(id => this.playerTokens[id].pos === -1);
+        if (this.movableTokenIds.length === 1 || allInBase) {
             this.drawBoard();
             setTimeout(() => {
-                this.executePlayerMove(this.movableTokenIds[0]);
-            }, 300);
-        } else {
-            // Multiple choices, highlight and let user click
-            this.drawBoard();
+                if (this.pendingDiceRoll === diceRoll) {
+                    this.executePlayerMove(this.movableTokenIds[0]);
+                }
+            }, 250);
+            return;
         }
+
+        // Multiple choices: highlight and let player click, with a 3-second auto-play watchdog
+        this.drawBoard();
+        this.autoMoveTimer = setTimeout(() => {
+            if (this.pendingDiceRoll === diceRoll && this.movableTokenIds.length > 0) {
+                console.log('[Ludo] Auto-picking player token to prevent stall');
+                let bestId = this.movableTokenIds[0];
+                for (let id of this.movableTokenIds) {
+                    if (this.playerTokens[id].pos > this.playerTokens[bestId].pos) {
+                        bestId = id;
+                    }
+                }
+                this.executePlayerMove(bestId);
+            }
+        }, 3000);
     }
 
     executePlayerMove(tokenId) {
+        if (this.autoMoveTimer) clearTimeout(this.autoMoveTimer);
         const diceVal = this.pendingDiceRoll;
         const cb = this.onMoveCallback;
         this.movableTokenIds = [];
         this.pendingDiceRoll = null;
 
-        this.moveToken(true, tokenId, diceVal, cb);
+        if (diceVal !== null && cb) {
+            this.moveToken(true, tokenId, diceVal, cb);
+        }
     }
 
     moveToken(isPlayer, tokenId, diceRoll, callback) {
