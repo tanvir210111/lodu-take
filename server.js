@@ -1,4 +1,4 @@
-// Live OTA Patch Server & DuckDNS Updater
+// Live Production Server: Game Download Landing, APK Direct Distribution & DuckDNS IP Auto-Sync
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -18,13 +18,12 @@ function updateDuckDNS() {
             console.log(`[DuckDNS] IP Update Response: ${data.trim()} (http://${DUCKDNS_DOMAIN}.duckdns.org)`);
         });
     }).on('error', (err) => {
-        console.warn('[DuckDNS] Update error:', err.message);
+        console.warn('[DuckDNS] IP sync warning:', err.message);
     });
 }
 
-// Initial update and periodic every 15 minutes
 updateDuckDNS();
-setInterval(updateDuckDNS, 15 * 60 * 1000);
+setInterval(updateDuckDNS, 10 * 60 * 1000); // Sync every 10 mins
 
 // MIME Types
 const MIME_TYPES = {
@@ -38,9 +37,9 @@ const MIME_TYPES = {
     '.apk': 'application/vnd.android.package-archive'
 };
 
-// 2. HTTP Server
+// 2. HTTP Server Router
 const server = http.createServer((req, res) => {
-    // CORS headers for Live OTA
+    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -51,50 +50,76 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // OTA API Check
-    if (req.url === '/api/ota/check') {
+    const cleanUrl = req.url.split('?')[0];
+
+    // API: Live OTA Check
+    if (cleanUrl === '/api/ota/check') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             status: 'online',
-            liveDomain: `http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}`,
-            version: '1.0.2',
-            otaEnabled: true,
-            patchDate: new Date().toISOString()
+            domain: `${DUCKDNS_DOMAIN}.duckdns.org`,
+            version: '1.0.3',
+            downloadUrl: `http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/Lodu_Master_Reward_Game.apk`,
+            updatedAt: new Date().toISOString()
         }));
         return;
     }
 
-    let filePath = path.join(__dirname, 'www', req.url === '/' ? 'index.html' : req.url);
-
-    // Fallback if not in www
-    if (!fs.existsSync(filePath)) {
-        filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+    // Direct APK Download route
+    if (cleanUrl === '/Lodu_Master_Reward_Game.apk' || cleanUrl === '/download-apk') {
+        const apkPath = path.join(__dirname, 'Lodu_Master_Reward_Game.apk');
+        if (fs.existsSync(apkPath)) {
+            const stat = fs.statSync(apkPath);
+            res.writeHead(200, {
+                'Content-Type': 'application/vnd.android.package-archive',
+                'Content-Length': stat.size,
+                'Content-Disposition': 'attachment; filename="Lodu_Master_Reward_Game.apk"'
+            });
+            fs.createReadStream(apkPath).pipe(res);
+            return;
+        }
     }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
-    fs.readFile(filePath, (err, content) => {
-        if (err) {
-            if (err.code === 'ENOENT') {
-                res.writeHead(404, { 'Content-Type': 'text/plain' });
-                res.end('404 Not Found');
-            } else {
-                res.writeHead(500, { 'Content-Type': 'text/plain' });
-                res.end('500 Internal Server Error');
-            }
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content);
+    // Route: Landing & Download Page (Root / or /download)
+    if (cleanUrl === '/' || cleanUrl === '/download') {
+        const landingPath = path.join(__dirname, 'landing.html');
+        if (fs.existsSync(landingPath)) {
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            fs.createReadStream(landingPath).pipe(res);
+            return;
         }
-    });
+    }
+
+    // Route: Play Game in Web (/play)
+    if (cleanUrl === '/play') {
+        const gamePath = path.join(__dirname, 'index.html');
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        fs.createReadStream(gamePath).pipe(res);
+        return;
+    }
+
+    // Static Assets
+    let filePath = path.join(__dirname, cleanUrl);
+    if (!fs.existsSync(filePath)) {
+        filePath = path.join(__dirname, 'www', cleanUrl);
+    }
+
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const ext = path.extname(filePath).toLowerCase();
+        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+        res.writeHead(200, { 'Content-Type': contentType });
+        fs.createReadStream(filePath).pipe(res);
+    } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('404 Not Found');
+    }
 });
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`=======================================================`);
-    console.log(`🚀 Live OTA Server running on port ${PORT}`);
-    console.log(`🌐 Local Access:    http://localhost:${PORT}`);
-    console.log(`🌐 DuckDNS Access:  http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}`);
-    console.log(`📡 Live OTA API:    http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/api/ota/check`);
+    console.log(`🚀 LUDO KING DOWNLOAD & GAME SERVER LIVE ON PORT ${PORT}`);
+    console.log(`🌐 Live Download Page: http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}`);
+    console.log(`🎮 Play in Browser:    http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/play`);
+    console.log(`📦 Direct APK URL:     http://${DUCKDNS_DOMAIN}.duckdns.org:${PORT}/Lodu_Master_Reward_Game.apk`);
     console.log(`=======================================================`);
 });
