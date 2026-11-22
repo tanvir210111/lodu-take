@@ -130,31 +130,47 @@ class UnityAdManager {
             }
         }
 
-        // Placements to try: configured placement, then standard Unity fallback
-        const candidatePlacements = [this.rewardedPlacement, 'Rewarded_Android'];
-        let lastLoadError = null;
-        let adReady = false;
-
-        for (const placement of candidatePlacements) {
-            updateStatus(`Requesting video (${placement})...`);
-            console.log(`[UnityAds] Trying to load placement: ${placement}...`);
-
-            try {
-                // Await native load
-                await plugin.loadRewardedVideo({ placementId: placement });
-                console.log(`[UnityAds] Placement ${placement} loaded successfully!`);
+        // 1. Check if already loaded in cache
+        try {
+            const check = await plugin.isRewardedVideoLoaded();
+            if (check && check.loaded) {
+                console.log('[UnityAds] Video ad already preloaded and ready in cache!');
                 adReady = true;
-                break;
-            } catch (loadErr) {
-                console.warn(`[UnityAds] Placement ${placement} load rejected:`, loadErr);
-                lastLoadError = loadErr;
+            }
+        } catch (e) {
+            console.log('[UnityAds] Preload check:', e);
+        }
+
+        // 2. If not already loaded, fetch placement
+        const candidatePlacements = [this.rewardedPlacement];
+        if (this.rewardedPlacement !== 'Rewarded_Android') {
+            candidatePlacements.push('Rewarded_Android');
+        }
+
+        const placementErrors = [];
+        if (!adReady) {
+            for (const placement of candidatePlacements) {
+                updateStatus(`Requesting video (${placement})...`);
+                console.log(`[UnityAds] Trying to load placement: ${placement}...`);
+
+                try {
+                    // Await native load
+                    await plugin.loadRewardedVideo({ placementId: placement });
+                    console.log(`[UnityAds] Placement ${placement} loaded successfully!`);
+                    adReady = true;
+                    break;
+                } catch (loadErr) {
+                    const msg = loadErr?.message || JSON.stringify(loadErr) || 'No Fill / Request Rejected';
+                    console.warn(`[UnityAds] Placement ${placement} load rejected:`, msg);
+                    placementErrors.push(`• ${placement}: ${msg}`);
+                }
             }
         }
 
         if (!adReady) {
             closeOverlay();
-            const reason = lastLoadError?.message || JSON.stringify(lastLoadError) || 'Network timeout or No Fill';
-            alert(`Unity Video Ad could not load:\n${reason}\n\nTroubleshooting tips:\n1. In Unity Cloud dashboard, ensure Test Mode is set to ON for Game ID ${this.gameId}.\n2. Check your phone's internet connection.\n3. Verify placement name: ${this.rewardedPlacement}`);
+            const reason = placementErrors.join('\n');
+            alert(`Unity Video Ad could not load:\n${reason}\n\nTroubleshooting tips:\n1. In Unity Cloud dashboard (Settings -> Test device), click "Create test device" and add your phone's Advertising ID.\n2. In Placements, verify "${this.rewardedPlacement}" is Active.\n3. Check your phone's internet connection.`);
             if (typeof onFailure === 'function') onFailure();
             return;
         }
