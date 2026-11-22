@@ -340,27 +340,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Watch Video Bonus Button
     if (btnWatchVideoBonus) {
-        btnWatchVideoBonus.addEventListener('click', () => {
+        btnWatchVideoBonus.addEventListener('click', async () => {
             btnWatchVideoBonus.disabled = true;
             btnWatchVideoBonus.innerHTML = '<span>Loading...</span>';
-            window.adManager.showRewardedVideo(
-                () => {
-                    window.walletManager.addBonus(5);
-                    triggerConfetti();
-                    alert('🎉 Congratulations! You received +5 BDT Cash Bonus!');
-                    updateGlobalBalance();
-                    showLobbyScreen();
-                    btnWatchVideoBonus.disabled = false;
-                    btnWatchVideoBonus.innerHTML = '<i data-lucide="video" class="w-3.5 h-3.5"></i><span>+5 BDT</span>';
-                    if (window.lucide) window.lucide.createIcons();
-                },
-                () => {
-                    alert('Video was not completed. Reward cancelled.');
-                    btnWatchVideoBonus.disabled = false;
-                    btnWatchVideoBonus.innerHTML = '<i data-lucide="video" class="w-3.5 h-3.5"></i><span>+5 BDT</span>';
-                    if (window.lucide) window.lucide.createIcons();
-                }
-            );
+            const resetBtn = () => {
+                btnWatchVideoBonus.disabled = false;
+                btnWatchVideoBonus.innerHTML = '<i data-lucide="video" class="w-3.5 h-3.5"></i><span>+5 BDT</span>';
+                if (window.lucide) window.lucide.createIcons();
+            };
+
+            try {
+                await window.adManager.showRewardedVideo(
+                    () => {
+                        window.walletManager.addBonus(5);
+                        triggerConfetti();
+                        alert('🎉 Congratulations! You received +5 BDT Cash Bonus!');
+                        updateGlobalBalance();
+                        showLobbyScreen();
+                        resetBtn();
+                    },
+                    () => {
+                        resetBtn();
+                    }
+                );
+            } catch (e) {
+                console.error(e);
+            } finally {
+                resetBtn();
+            }
         });
     }
 

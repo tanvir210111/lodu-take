@@ -1,4 +1,4 @@
-// Unity Ads Native Advertising Controller
+// Unity Ads Native Advertising Controller with Real-time Diagnostics
 class UnityAdManager {
     constructor() {
         this.gameId = '800447683';
@@ -7,9 +7,10 @@ class UnityAdManager {
         this.bannerPlacement = 'BP_Banner_Android';
 
         this.initialized = false;
-        this.isLoadingAd = false;
+        this.initError = null;
+        this.isBuffering = false;
 
-        // Initialize as soon as DOM or Capacitor is ready
+        // Auto-initialize when ready
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
             this.initSdk();
         } else {
@@ -35,86 +36,72 @@ class UnityAdManager {
 
     async initSdk() {
         if (!this.isNativeApp()) {
-            console.log('[UnityAds] Running on Web Browser. Native SDK unavailable.');
+            console.log('[UnityAds] Web environment detected. Native SDK not available.');
             return;
         }
 
         const plugin = this.getPlugin();
         if (!plugin) {
-            console.warn('[UnityAds] Plugin not yet available, retrying in 1s...');
-            setTimeout(() => this.initSdk(), 1000);
+            console.warn('[UnityAds] Plugin not yet injected, retrying in 800ms...');
+            setTimeout(() => this.initSdk(), 800);
             return;
         }
 
         try {
-            console.log('[UnityAds] Initializing native Unity Ads SDK (Game ID:', this.gameId, ')...');
+            console.log(`[UnityAds] Initializing Unity Ads SDK with Game ID: ${this.gameId}...`);
             await plugin.initialize({
                 gameId: this.gameId,
-                testMode: true // Enables instant video ad delivery on unlisted apps
+                testMode: true // Test mode enabled for unlisted APK
             });
             this.initialized = true;
-            console.log('[UnityAds] Initialization complete!');
-            
-            // Preload video ads immediately
-            this.preloadRewarded();
-            this.preloadInterstitial();
+            this.initError = null;
+            console.log('[UnityAds] Unity Ads SDK successfully initialized!');
+
+            // Preload video ads in advance
+            this.preload();
         } catch (err) {
-            console.error('[UnityAds] Initialization error:', err);
+            this.initialized = false;
+            this.initError = err?.message || JSON.stringify(err);
+            console.error('[UnityAds] Initialization Error:', this.initError);
         }
     }
 
-    async preloadRewarded() {
+    async preload() {
         const plugin = this.getPlugin();
-        if (!plugin || !this.isNativeApp()) return;
+        if (!plugin || !this.isNativeApp() || !this.initialized) return;
 
         try {
-            console.log('[UnityAds] Preloading Rewarded Video...');
-            await plugin.loadRewardedVideo({
-                placementId: this.rewardedPlacement
-            });
-            console.log('[UnityAds] Rewarded Video preloaded and ready!');
-        } catch (err) {
-            console.warn('[UnityAds] Preload rewarded warning:', err);
+            await plugin.loadRewardedVideo({ placementId: this.rewardedPlacement });
+            console.log(`[UnityAds] Rewarded Video (${this.rewardedPlacement}) preloaded.`);
+        } catch (e) {
+            console.warn('[UnityAds] Preload warning:', e);
         }
     }
 
-    async preloadInterstitial() {
-        const plugin = this.getPlugin();
-        if (!plugin || !this.isNativeApp()) return;
-
-        try {
-            console.log('[UnityAds] Preloading Interstitial...');
-            await plugin.loadInterstitial({
-                placementId: this.interstitialPlacement
-            });
-            console.log('[UnityAds] Interstitial preloaded and ready!');
-        } catch (err) {
-            console.warn('[UnityAds] Preload interstitial warning:', err);
-        }
-    }
-
-    // Rewarded Video: Revive or Bonus Coins
+    // Rewarded Video: For Revive or +5 BDT Bonus
     async showRewardedVideo(onSuccess, onFailure) {
         if (!this.isNativeApp()) {
-            alert('Notice: Unity Video Ads only play inside the Android APK app.\nPlease download and open the APK on your phone.');
+            alert('Notice: Unity Video Ads only run natively inside the Android APK app on your mobile phone.\nPlease open the downloaded app on Android.');
+            if (typeof onFailure === 'function') onFailure();
             return;
         }
 
         const plugin = this.getPlugin();
         if (!plugin) {
-            alert('Ad SDK initializing... Please wait 5 seconds and try again.');
+            alert('Unity Ads plugin is initializing. Please wait a few seconds and try again.');
             this.initSdk();
+            if (typeof onFailure === 'function') onFailure();
             return;
         }
 
         // Show visual loading overlay
         const overlay = document.createElement('div');
         overlay.id = 'adBufferOverlay';
-        overlay.className = 'fixed inset-0 bg-black/95 z-[99999] flex flex-col items-center justify-center p-4 text-center';
+        overlay.className = 'fixed inset-0 bg-black/95 z-[99999] flex flex-col items-center justify-center p-5 text-center';
         overlay.innerHTML = `
-            <div class="w-14 h-14 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <div class="text-base font-black text-white font-['Poppins']">Connecting to Unity Ads...</div>
-            <div id="adBufferSubtext" class="text-xs text-amber-300 mt-1">Downloading HD Video Stream...</div>
+            <div class="w-14 h-14 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div class="text-base font-black text-white font-['Poppins']">Connecting to Unity Ads Server...</div>
+            <div id="adBufferSubtext" class="text-xs text-amber-300 mt-1.5 font-medium">Downloading Video Stream...</div>
         `;
         document.body.appendChild(overlay);
 
@@ -123,49 +110,79 @@ class UnityAdManager {
             if (el) el.remove();
         };
 
-        try {
-            // Check if already loaded
-            let check = await plugin.isRewardedVideoLoaded().catch(() => ({ loaded: false }));
-            
-            // If not loaded yet, initiate load and wait up to 6 seconds
-            if (!check || !check.loaded) {
-                console.log('[UnityAds] Ad not cached yet, requesting load...');
-                plugin.loadRewardedVideo({ placementId: this.rewardedPlacement }).catch(() => {});
+        const updateStatus = (msg) => {
+            const subtext = document.getElementById('adBufferSubtext');
+            if (subtext) subtext.textContent = msg;
+        };
 
-                const subtext = document.getElementById('adBufferSubtext');
-                for (let i = 0; i < 10; i++) {
-                    await new Promise(r => setTimeout(r, 600));
-                    if (subtext) subtext.textContent = `Buffering Video (${Math.min(90, (i + 1) * 12)}%)...`;
-                    check = await plugin.isRewardedVideoLoaded().catch(() => ({ loaded: false }));
-                    if (check && check.loaded) {
-                        console.log('[UnityAds] Video ready after buffering!');
-                        break;
-                    }
-                }
+        // Ensure initialized
+        if (!this.initialized) {
+            updateStatus('Initializing Unity Ads engine...');
+            try {
+                await plugin.initialize({ gameId: this.gameId, testMode: true });
+                this.initialized = true;
+            } catch (initErr) {
+                closeOverlay();
+                const errStr = initErr?.message || JSON.stringify(initErr);
+                alert(`Unity Ads Initialization Failed:\n${errStr}\n\nPlease verify that Game ID ${this.gameId} is active in your Unity Cloud dashboard.`);
+                if (typeof onFailure === 'function') onFailure();
+                return;
             }
+        }
 
+        // Placements to try: configured placement, then standard Unity fallback
+        const candidatePlacements = [this.rewardedPlacement, 'Rewarded_Android'];
+        let lastLoadError = null;
+        let adReady = false;
+
+        for (const placement of candidatePlacements) {
+            updateStatus(`Requesting video (${placement})...`);
+            console.log(`[UnityAds] Trying to load placement: ${placement}...`);
+
+            try {
+                // Await native load
+                await plugin.loadRewardedVideo({ placementId: placement });
+                console.log(`[UnityAds] Placement ${placement} loaded successfully!`);
+                adReady = true;
+                break;
+            } catch (loadErr) {
+                console.warn(`[UnityAds] Placement ${placement} load rejected:`, loadErr);
+                lastLoadError = loadErr;
+            }
+        }
+
+        if (!adReady) {
+            closeOverlay();
+            const reason = lastLoadError?.message || JSON.stringify(lastLoadError) || 'Network timeout or No Fill';
+            alert(`Unity Video Ad could not load:\n${reason}\n\nTroubleshooting tips:\n1. In Unity Cloud dashboard, ensure Test Mode is set to ON for Game ID ${this.gameId}.\n2. Check your phone's internet connection.\n3. Verify placement name: ${this.rewardedPlacement}`);
+            if (typeof onFailure === 'function') onFailure();
+            return;
+        }
+
+        // Ad is ready! Show video
+        updateStatus('Opening Fullscreen Video Ad...');
+        try {
+            await new Promise(r => setTimeout(r, 400));
             closeOverlay();
 
-            // Show the actual Unity Rewarded Video
-            console.log('[UnityAds] Triggering showRewardedVideo...');
-            const res = await plugin.showRewardedVideo();
-            console.log('[UnityAds] Rewarded Video completed:', res);
+            const result = await plugin.showRewardedVideo();
+            console.log('[UnityAds] Video playback completed:', result);
 
-            if (res && res.success) {
+            if (result && result.success) {
                 if (typeof onSuccess === 'function') onSuccess();
             } else {
                 if (typeof onFailure === 'function') onFailure();
             }
 
-            // Immediately preload the next video
-            setTimeout(() => this.preloadRewarded(), 1500);
+            // Preload next video in background
+            setTimeout(() => this.preload(), 1500);
 
-        } catch (err) {
+        } catch (showErr) {
             closeOverlay();
-            console.error('[UnityAds] Failed to display video ad:', err);
-            alert('Unity Video Ad is still buffering from the server or no network available. Please check your internet connection and try again in a few moments.');
+            console.error('[UnityAds] Error during showRewardedVideo:', showErr);
+            const errDetails = showErr?.message || JSON.stringify(showErr);
+            alert(`Unity Video Playback Error:\n${errDetails}`);
             if (typeof onFailure === 'function') onFailure();
-            setTimeout(() => this.preloadRewarded(), 2000);
         }
     }
 
@@ -177,21 +194,21 @@ class UnityAdManager {
         }
 
         const plugin = this.getPlugin();
-        if (!plugin) {
+        if (!plugin || !this.initialized) {
             if (typeof onClosed === 'function') onClosed();
             return;
         }
 
-        try {
-            const check = await plugin.isInterstitialLoaded().catch(() => ({ loaded: false }));
-            if (check && check.loaded) {
+        const candidatePlacements = [this.interstitialPlacement, 'Interstitial_Android'];
+        for (const placement of candidatePlacements) {
+            try {
+                await plugin.loadInterstitial({ placementId: placement });
                 await plugin.showInterstitial();
-                setTimeout(() => this.preloadInterstitial(), 2000);
-            } else {
-                this.preloadInterstitial();
+                console.log(`[UnityAds] Interstitial ${placement} shown.`);
+                break;
+            } catch (e) {
+                console.warn(`[UnityAds] Interstitial ${placement} warning:`, e);
             }
-        } catch (err) {
-            console.warn('[UnityAds] Interstitial warning:', err);
         }
 
         if (typeof onClosed === 'function') onClosed();
