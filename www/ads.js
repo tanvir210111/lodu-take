@@ -94,21 +94,42 @@ class UnityAdManager {
             return;
         }
 
-        // Show visual loading overlay
+        // Helper for timing out slow native calls
+        const withTimeout = (promise, ms, errorMsg) => {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(errorMsg)), ms))
+            ]);
+        };
+
+        // Show visual loading overlay with cancel button
         const overlay = document.createElement('div');
         overlay.id = 'adBufferOverlay';
-        overlay.className = 'fixed inset-0 bg-black/95 z-[99999] flex flex-col items-center justify-center p-5 text-center';
+        overlay.className = 'fixed inset-0 bg-black/95 z-[99999] flex flex-col items-center justify-center p-6 text-center';
         overlay.innerHTML = `
+            <button id="btnCancelAdBuffer" type="button" class="absolute top-6 right-6 w-11 h-11 rounded-full bg-slate-800/90 border border-slate-700 text-slate-300 font-bold text-xl flex items-center justify-center active:scale-95 hover:bg-slate-700">✕</button>
             <div class="w-14 h-14 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-4"></div>
             <div class="text-base font-black text-white font-['Poppins']">Connecting to Unity Ads Server...</div>
             <div id="adBufferSubtext" class="text-xs text-amber-300 mt-1.5 font-medium">Downloading Video Stream...</div>
+            <div class="text-[11px] text-slate-400 mt-4 max-w-xs">ক্যানসেল করতে উপরের ✕ বাটনে চাপুন</div>
         `;
         document.body.appendChild(overlay);
 
+        let isCancelled = false;
         const closeOverlay = () => {
             const el = document.getElementById('adBufferOverlay');
             if (el) el.remove();
         };
+
+        const cancelBtn = document.getElementById('btnCancelAdBuffer');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                isCancelled = true;
+                closeOverlay();
+                console.log('[UnityAds] User cancelled loading.');
+                if (typeof onFailure === 'function') onFailure();
+            });
+        }
 
         const updateStatus = (msg) => {
             const subtext = document.getElementById('adBufferSubtext');
@@ -119,7 +140,11 @@ class UnityAdManager {
         if (!this.initialized) {
             updateStatus('Connecting to Ad Server...');
             try {
-                await plugin.initialize({ gameId: this.gameId, testMode: false });
+                await withTimeout(
+                    plugin.initialize({ gameId: this.gameId, testMode: false }),
+                    8000,
+                    'Server initialization timed out'
+                );
                 this.initialized = true;
             } catch (initErr) {
                 closeOverlay();
@@ -130,9 +155,11 @@ class UnityAdManager {
             }
         }
 
+        if (isCancelled) return;
+
         // 1. Check if already loaded in cache
         try {
-            const check = await plugin.isRewardedVideoLoaded();
+            const check = await withTimeout(plugin.isRewardedVideoLoaded(), 3000, 'Check timeout');
             if (check && check.loaded) {
                 console.log('[UnityAds] Video ad already preloaded and ready in cache!');
                 adReady = true;
@@ -141,7 +168,9 @@ class UnityAdManager {
             console.log('[UnityAds] Preload check:', e);
         }
 
-        // 2. If not already loaded, fetch placement
+        if (isCancelled) return;
+
+        // 2. If not already loaded, fetch placement with a strict 10s timeout
         const candidatePlacements = [this.rewardedPlacement];
         const placementErrors = [];
         if (!adReady) {
@@ -150,23 +179,29 @@ class UnityAdManager {
                 console.log(`[UnityAds] Trying to load placement: ${placement}...`);
 
                 try {
-                    // Await native load
-                    await plugin.loadRewardedVideo({ placementId: placement });
+                    // Await native load with 10s timeout
+                    await withTimeout(
+                        plugin.loadRewardedVideo({ placementId: placement }),
+                        10000,
+                        'বিজ্ঞাপন লোড হতে অতিরিক্ত সময় নিয়েছে (Timeout)। নেটওয়ার্কে কোনো বিজ্ঞাপন পাওয়া যায়নি (No Fill)।'
+                    );
                     console.log(`[UnityAds] Placement ${placement} loaded successfully!`);
                     adReady = true;
                     break;
                 } catch (loadErr) {
-                    const msg = loadErr?.message || JSON.stringify(loadErr) || 'No Fill / Request Rejected';
+                    const msg = loadErr?.message || JSON.stringify(loadErr) || 'No Fill';
                     console.warn(`[UnityAds] Placement ${placement} load rejected:`, msg);
                     placementErrors.push(`${placement}: ${msg}`);
                 }
             }
         }
 
+        if (isCancelled) return;
+
         if (!adReady) {
             closeOverlay();
             const reason = placementErrors.join('\n');
-            alert(`ভিডিও বিজ্ঞাপন লোড হতে পারেনি:\n${reason}\n\nপরামর্শ:\n1. ইউনিটি ড্যাশবোর্ডে Test Mode অফ/লাইভ করা থাকলে রিয়েল বিজ্ঞাপন কিছুটা সময় নিতে পারে।\n2. ইন্টারনেট সংযোগ চেক করে কিছুক্ষণ পর আবার চেষ্টা করুন।`);
+            alert(`বিজ্ঞাপন এই মুহূর্তে লোড করা যায়নি:\n\n${reason}\n\nকারণ:\nঅ্যাপটি Google Play Store এ লাইভ না থাকায় বিজ্ঞাপনদাতাদের আসল (Real) বিজ্ঞাপন সবসময় পাওয়া যায় না (No Fill)।\n\nসমাধান:\nসবাইকে নিশ্চিত বিজ্ঞাপন দেখাতে Unity Cloud ড্যাশবোর্ডে "Force test mode ON for all devices" সিলেক্ট করে Save করুন।`);
             if (typeof onFailure === 'function') onFailure();
             return;
         }
