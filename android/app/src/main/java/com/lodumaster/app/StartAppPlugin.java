@@ -24,12 +24,16 @@ public class StartAppPlugin extends Plugin {
     @PluginMethod
     public void init(PluginCall call) {
         String appId = call.getString("appId", "210830571");
+        boolean testMode = call.getBoolean("testMode", true);
         try {
             StartAppSDK.init(getContext(), appId, false);
+            if (testMode) {
+                StartAppSDK.setTestAdsEnabled(true);
+            }
             StartAppAd.disableSplash();
             rewardedAd = new StartAppAd(getContext());
             isInitialized = true;
-            Log.d(TAG, "StartApp SDK initialized with App ID: " + appId);
+            Log.d(TAG, "StartApp SDK initialized with App ID: " + appId + ", testMode: " + testMode);
             preload();
             call.resolve();
         } catch (Exception e) {
@@ -66,6 +70,7 @@ public class StartAppPlugin extends Plugin {
         if (!isInitialized) {
             try {
                 StartAppSDK.init(getContext(), "210830571", false);
+                StartAppSDK.setTestAdsEnabled(true);
                 StartAppAd.disableSplash();
                 isInitialized = true;
             } catch (Exception ignored) {}

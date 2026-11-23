@@ -43,7 +43,7 @@ class StartAppAdManager {
 
         try {
             console.log(`[Start.io] Initializing Start.io SDK with App ID: ${this.appId}...`);
-            await plugin.init({ appId: this.appId });
+            await plugin.init({ appId: this.appId, testMode: true });
             this.initialized = true;
             console.log('[Start.io] Start.io SDK initialized successfully!');
         } catch (e) {
