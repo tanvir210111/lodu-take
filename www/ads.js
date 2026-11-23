@@ -48,14 +48,14 @@ class UnityAdManager {
         }
 
         try {
-            console.log(`[UnityAds] Initializing Unity Ads SDK with Game ID: ${this.gameId}...`);
+            console.log(`[UnityAds] Initializing Unity Ads SDK with Game ID: ${this.gameId} (Production Live Ads Mode)...`);
             await plugin.initialize({
                 gameId: this.gameId,
-                testMode: true // Test mode enabled for unlisted APK
+                testMode: false // Live production ads for all real users
             });
             this.initialized = true;
             this.initError = null;
-            console.log('[UnityAds] Unity Ads SDK successfully initialized!');
+            console.log('[UnityAds] Unity Ads SDK successfully initialized in Production Mode!');
 
             // Preload video ads in advance
             this.preload();
@@ -117,14 +117,14 @@ class UnityAdManager {
 
         // Ensure initialized
         if (!this.initialized) {
-            updateStatus('Initializing Unity Ads engine...');
+            updateStatus('Connecting to Ad Server...');
             try {
-                await plugin.initialize({ gameId: this.gameId, testMode: true });
+                await plugin.initialize({ gameId: this.gameId, testMode: false });
                 this.initialized = true;
             } catch (initErr) {
                 closeOverlay();
                 const errStr = initErr?.message || JSON.stringify(initErr);
-                alert(`Unity Ads Initialization Failed:\n${errStr}\n\nPlease verify that Game ID ${this.gameId} is active in your Unity Cloud dashboard.`);
+                alert(`Ad Server Error:\n${errStr}\n\nPlease check your internet connection.`);
                 if (typeof onFailure === 'function') onFailure();
                 return;
             }
@@ -143,10 +143,6 @@ class UnityAdManager {
 
         // 2. If not already loaded, fetch placement
         const candidatePlacements = [this.rewardedPlacement];
-        if (this.rewardedPlacement !== 'Rewarded_Android') {
-            candidatePlacements.push('Rewarded_Android');
-        }
-
         const placementErrors = [];
         if (!adReady) {
             for (const placement of candidatePlacements) {
@@ -162,7 +158,7 @@ class UnityAdManager {
                 } catch (loadErr) {
                     const msg = loadErr?.message || JSON.stringify(loadErr) || 'No Fill / Request Rejected';
                     console.warn(`[UnityAds] Placement ${placement} load rejected:`, msg);
-                    placementErrors.push(`• ${placement}: ${msg}`);
+                    placementErrors.push(`${placement}: ${msg}`);
                 }
             }
         }
@@ -170,7 +166,7 @@ class UnityAdManager {
         if (!adReady) {
             closeOverlay();
             const reason = placementErrors.join('\n');
-            alert(`Unity Video Ad could not load:\n${reason}\n\nTroubleshooting tips:\n1. In Unity Cloud dashboard (Settings -> Test device), click "Create test device" and add your phone's Advertising ID.\n2. In Placements, verify "${this.rewardedPlacement}" is Active.\n3. Check your phone's internet connection.`);
+            alert(`ভিডিও বিজ্ঞাপন লোড হতে পারেনি:\n${reason}\n\nপরামর্শ:\n1. ইউনিটি ড্যাশবোর্ডে Test Mode অফ/লাইভ করা থাকলে রিয়েল বিজ্ঞাপন কিছুটা সময় নিতে পারে।\n2. ইন্টারনেট সংযোগ চেক করে কিছুক্ষণ পর আবার চেষ্টা করুন।`);
             if (typeof onFailure === 'function') onFailure();
             return;
         }
@@ -215,7 +211,7 @@ class UnityAdManager {
             return;
         }
 
-        const candidatePlacements = [this.interstitialPlacement, 'Interstitial_Android'];
+        const candidatePlacements = [this.interstitialPlacement];
         for (const placement of candidatePlacements) {
             try {
                 await plugin.loadInterstitial({ placementId: placement });
